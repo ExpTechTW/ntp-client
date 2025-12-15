@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::ntp;
@@ -186,7 +185,19 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
     let secs = (unix_ms / 1000.0).floor() as i64;
     let usecs = ((unix_ms % 1000.0) * 1000.0) as i64;
 
-    // 先嘗試直接設定（如果已有權限）
+    // 檢查是否以 root 執行 (euid == 0)
+    let is_root = unsafe { libc::geteuid() } == 0;
+
+    if !is_root {
+        // 非 root 執行，直接返回權限錯誤，不彈出密碼框
+        return Err(SetTimeError {
+            success: false,
+            error: "需要管理員權限才能設定系統時間".to_string(),
+            code: "PERMISSION_DENIED".to_string(),
+        });
+    }
+
+    // 以 root 執行，直接使用 settimeofday
     let tv = libc::timeval {
         tv_sec: secs,
         tv_usec: usecs as i32,
@@ -197,65 +208,38 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
     if result == 0 {
         let datetime = chrono::DateTime::from_timestamp(secs, (usecs * 1000) as u32)
             .unwrap_or_else(|| chrono::DateTime::from_timestamp(secs, 0).unwrap());
-        return Ok(format!(
+        Ok(format!(
             "System time set (UTC): {}.{:03}",
             datetime.format("%Y-%m-%d %H:%M:%S"),
             (usecs / 1000)
-        ));
-    }
-
-    // 需要管理員權限，使用 osascript 請求
-    let datetime = chrono::DateTime::from_timestamp(secs, 0).ok_or_else(|| SetTimeError {
-        success: false,
-        error: "Invalid timestamp".to_string(),
-        code: "INVALID_TIMESTAMP".to_string(),
-    })?;
-
-    let date_str = datetime.format("%m%d%H%M%Y.%S").to_string();
-
-    // 使用 osascript 請求管理員權限執行 date 命令
-    let script = format!(
-        r#"do shell script "date -u {}" with administrator privileges"#,
-        date_str
-    );
-
-    let output = Command::new("osascript")
-        .args(["-e", &script])
-        .output()
-        .map_err(|e| SetTimeError {
-            success: false,
-            error: format!("執行失敗: {}", e),
-            code: "EXEC_ERROR".to_string(),
-        })?;
-
-    if output.status.success() {
-        Ok(format!(
-            "System time set (UTC): {}",
-            datetime.format("%Y-%m-%d %H:%M:%S")
         ))
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        if stderr.contains("User canceled") || stderr.contains("-128") {
-            Err(SetTimeError {
-                success: false,
-                error: "使用者取消授權".to_string(),
-                code: "USER_CANCELED".to_string(),
-            })
-        } else {
-            Err(SetTimeError {
-                success: false,
-                error: format!("設定失敗: {}", stderr),
-                code: "PERMISSION_DENIED".to_string(),
-            })
-        }
+        let errno = std::io::Error::last_os_error();
+        Err(SetTimeError {
+            success: false,
+            error: format!("settimeofday failed: {}", errno),
+            code: "SET_TIME_ERROR".to_string(),
+        })
     }
 }
 
 
 #[cfg(target_os = "linux")]
-fn set_time_linux(unix_ms: f64) -> Result<String, SetTimeError> {
-    let secs = (unix_ms / 1000.0) as i64;
-    let nanos = ((unix_ms % 1000.0) * 1_000_000.0) as u32;
+fn set_time_linux(_unix_ms: f64) -> Result<String, SetTimeError> {
+    // 檢查是否以 root 執行 (euid == 0)
+    let is_root = unsafe { libc::geteuid() } == 0;
+
+    if !is_root {
+        // 非 root 執行，直接返回權限錯誤，不彈出密碼框
+        return Err(SetTimeError {
+            success: false,
+            error: "需要管理員權限才能設定系統時間".to_string(),
+            code: "PERMISSION_DENIED".to_string(),
+        });
+    }
+
+    let secs = (_unix_ms / 1000.0) as i64;
+    let nanos = ((_unix_ms % 1000.0) * 1_000_000.0) as u32;
 
     let datetime = chrono::DateTime::from_timestamp(secs, nanos).ok_or_else(|| SetTimeError {
         success: false,
@@ -265,29 +249,22 @@ fn set_time_linux(unix_ms: f64) -> Result<String, SetTimeError> {
 
     let date_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
 
-    if let Ok(output) = Command::new("pkexec")
-        .args(["timedatectl", "set-time", &date_str])
+    // 以 root 執行，直接使用 timedatectl 或 date
+    if let Ok(output) = Command::new("timedatectl")
+        .args(["set-time", &date_str])
         .output()
     {
         if output.status.success() {
             return Ok(format!("System time set via timedatectl: {}", date_str));
         }
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        if stderr.contains("dismissed") || stderr.contains("canceled") {
-            return Err(SetTimeError {
-                success: false,
-                error: "User canceled".to_string(),
-                code: "USER_CANCELED".to_string(),
-            });
-        }
     }
 
-    let output = Command::new("pkexec")
-        .args(["date", "-s", &date_str])
+    let output = Command::new("date")
+        .args(["-s", &date_str])
         .output()
         .map_err(|e| SetTimeError {
             success: false,
-            error: format!("Failed to execute pkexec: {}", e),
+            error: format!("Failed to execute date: {}", e),
             code: "EXEC_ERROR".to_string(),
         })?;
 
@@ -298,13 +275,7 @@ fn set_time_linux(unix_ms: f64) -> Result<String, SetTimeError> {
         Err(SetTimeError {
             success: false,
             error: format!("Failed to set time: {}", stderr.trim()),
-            code: if stderr.contains("dismissed") || stderr.contains("canceled") {
-                "USER_CANCELED".to_string()
-            } else if stderr.contains("permission") || stderr.contains("not authorized") {
-                "PERMISSION_DENIED".to_string()
-            } else {
-                "SET_TIME_ERROR".to_string()
-            },
+            code: "SET_TIME_ERROR".to_string(),
         })
     }
 }
@@ -412,6 +383,8 @@ pub struct SyncResult {
     pub t4: f64,
     pub pre_sync_offset: f64,
     pub post_sync_offset: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -504,36 +477,49 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         wait_until_local - now_local
     );
 
-    if let Err(e) = do_sync(next_second, wait_until_local) {
+    // 嘗試同步，記錄是否有權限錯誤
+    let sync_error = do_sync(next_second, wait_until_local).err();
+    let permission_denied = sync_error
+        .as_ref()
+        .map(|e| e.code == "PERMISSION_DENIED")
+        .unwrap_or(false);
+
+    if let Some(ref e) = sync_error {
         println!("[SYNC] 同步失敗: {}", e.error);
-        return serde_json::to_string(&SyncError {
-            success: false,
-            error: e.error,
-            code: e.code,
-        })
-        .map_err(|e| e.to_string());
     }
 
-    // 驗證結果
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    // 驗證結果（如果同步成功才驗證）
     let new_time = get_current_time_ms();
-
-    let post_sync_offset = match ntp::query_ntp(&server) {
-        Ok(r) => {
-            println!("[SYNC] 驗證: offset={:.3}ms delay={:.3}ms", r.offset, r.delay);
-            r.offset
+    let post_sync_offset = if sync_error.is_none() {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        match ntp::query_ntp(&server) {
+            Ok(r) => {
+                println!("[SYNC] 驗證: offset={:.3}ms delay={:.3}ms", r.offset, r.delay);
+                r.offset
+            }
+            Err(_) => 0.0,
         }
-        Err(_) => 0.0,
+    } else {
+        // 同步失敗，使用原始測量的偏差
+        median_offset
     };
 
-    println!(
-        "[SYNC] 完成: 原始偏差={:.3}ms 最終偏差={:.3}ms",
-        median_offset, post_sync_offset
-    );
+    if sync_error.is_none() {
+        println!(
+            "[SYNC] 完成: 原始偏差={:.3}ms 最終偏差={:.3}ms",
+            median_offset, post_sync_offset
+        );
+    }
 
+    // 無論同步是否成功，都返回測量數據
+    // 但如果是權限錯誤，標記 code 讓前端顯示警告
     serde_json::to_string(&SyncResult {
-        success: true,
-        message: format!("同步完成 (5次測量中位數)"),
+        success: sync_error.is_none(),
+        message: if sync_error.is_none() {
+            "同步完成 (5次測量中位數)".to_string()
+        } else {
+            sync_error.as_ref().map(|e| e.error.clone()).unwrap_or_default()
+        },
         server: ntp_result.server,
         server_ip: ntp_result.server_ip,
         offset: post_sync_offset,
@@ -546,6 +532,11 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         t4: ntp_result.t4,
         pre_sync_offset: median_offset,
         post_sync_offset,
+        code: if permission_denied {
+            Some("PERMISSION_DENIED".to_string())
+        } else {
+            None
+        },
     })
     .map_err(|e| e.to_string())
 }

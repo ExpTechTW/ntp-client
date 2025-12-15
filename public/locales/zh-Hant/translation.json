@@ -11,7 +11,8 @@
     "querying": "查詢中...",
     "querySuccess": "查詢成功",
     "queryFailed": "查詢失敗",
-    "popularServers": "常用伺服器"
+    "popularServers": "常用伺服器",
+    "permissionError": "無法設定系統時間，需要管理員權限"
   },
   "common": {
     "loading": "載入中...",

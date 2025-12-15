@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, Power } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, AlertTriangle } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-shell'
@@ -91,7 +91,8 @@ export default function HomePage() {
   const [isCompact, setIsCompact] = useState(false)
   const [version, setVersion] = useState('')
   const [isDark, setIsDark] = useState(true)
-  const [autostart, setAutostart] = useState(false)
+  // const [autostart, setAutostart] = useState(false) // 開機自啟動功能暫時停用
+  const [permissionError, setPermissionError] = useState(false)
   const refs = useRef<{ time?: NodeJS.Timeout; sync?: NodeJS.Timeout; cd?: NodeJS.Timeout; syncing?: boolean }>({})
 
   const toggleTheme = () => {
@@ -100,6 +101,7 @@ export default function HomePage() {
     localStorage.setItem('theme', newTheme ? 'dark' : 'light')
   }
 
+  /* 開機自啟動功能暫時停用
   const toggleAutostart = async () => {
     try {
       if (autostart) {
@@ -122,18 +124,21 @@ export default function HomePage() {
       setAutostart(false)
     }
   }
+  */
 
   const query = async (srv: string) => {
     if (!srv.trim() || isQuerying || refs.current.syncing) return
     refs.current.syncing = true
     setIsQuerying(true)
     setCountdown(60)
+    setPermissionError(false)
 
     try {
       const res = JSON.parse(await invoke<string>('sync_ntp_time', { server: srv.trim() }))
-      if (res.success) {
+      // 無論同步是否成功，只要有測量數據就顯示
+      if (res.server) {
         setResult({
-          success: true, server: res.server, server_ip: res.server_ip,
+          success: res.success, server: res.server, server_ip: res.server_ip,
           t1: res.t1, t2: res.t2, t3: res.t3, t4: res.t4,
           offset: res.offset, delay: res.delay,
           leap: 0, version: 4, mode: 4, stratum: 1,
@@ -141,6 +146,8 @@ export default function HomePage() {
           ref_id: '', ref_time: 0,
           pre_sync_offset: res.pre_sync_offset, post_sync_offset: res.post_sync_offset,
         })
+        // 檢查是否為權限錯誤
+        setPermissionError(res.code === 'PERMISSION_DENIED')
       } else {
         setResult(null)
       }
@@ -156,7 +163,7 @@ export default function HomePage() {
     setNow(new Date())
     refs.current.time = setInterval(() => setNow(new Date()), 50)
     getVersion().then(v => setVersion(`v${v}`)).catch(() => {})
-    checkAutostart()
+    // checkAutostart() // 開機自啟動功能暫時停用
 
     // 讀取主題設定
     const savedTheme = localStorage.getItem('theme')
@@ -183,12 +190,20 @@ export default function HomePage() {
     }
   }, [server])
 
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const ss = String(now.getSeconds()).padStart(2, '0')
-  const ms = String(now.getMilliseconds()).padStart(3, '0')
-  const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} 星期${WEEKDAYS[now.getDay()]}`
+  // 計算校正後的正確時間（系統時間 + offset）
+  const correctedTime = result ? new Date(now.getTime() + result.offset) : now
+  const hh = String(correctedTime.getHours()).padStart(2, '0')
+  const mm = String(correctedTime.getMinutes()).padStart(2, '0')
+  const ss = String(correctedTime.getSeconds()).padStart(2, '0')
+  const ms = String(correctedTime.getMilliseconds()).padStart(3, '0')
+  const dateStr = `${correctedTime.getFullYear()}/${String(correctedTime.getMonth() + 1).padStart(2, '0')}/${String(correctedTime.getDate()).padStart(2, '0')} 星期${WEEKDAYS[correctedTime.getDay()]}`
   const status = result ? getStatus(result.offset) : null
+
+  // 系統時間（用於無法校正時顯示）
+  const sysHh = String(now.getHours()).padStart(2, '0')
+  const sysMm = String(now.getMinutes()).padStart(2, '0')
+  const sysSs = String(now.getSeconds()).padStart(2, '0')
+  const sysMs = String(now.getMilliseconds()).padStart(3, '0')
 
   const Digit = ({ children, className = '' }: { children: string; className?: string }) => (
     <span className={`inline-block text-center ${className}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -244,12 +259,26 @@ export default function HomePage() {
           <Digit className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>{ms[2]}</Digit>
         </div>
         <p className={`text-sm mt-1 ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`} suppressHydrationWarning>{dateStr}</p>
-        {result?.success && status && (
+        {result && status && (
           <div className="flex items-center gap-2 mt-1">
             <span className={`text-xs ${status.color}`}>{status.label}</span>
             <span className={`text-sm font-mono ${status.color}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
               {result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}
             </span>
+          </div>
+        )}
+        {permissionError && (
+          <div className="flex flex-col items-center gap-1 mt-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-yellow-500/20 border border-yellow-500/50">
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+              <span className="text-xs text-yellow-500">{t('home.permissionError')}</span>
+            </div>
+            <div className="flex items-center gap-1 text-yellow-500/80">
+              <span className="text-[10px]">系統時間:</span>
+              <span className="text-xs font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {sysHh}:{sysMm}:{sysSs}.{sysMs}
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -282,11 +311,15 @@ export default function HomePage() {
         </div>
 
         <div className={`rounded border ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
-          {result?.success ? (
+          {result ? (
             <>
               <div className={`flex items-center border-b ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
                 <div className={`flex items-center gap-1 px-1.5 py-1 border-r ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
-                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                  {result.success ? (
+                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                  ) : (
+                    <AlertTriangle className="w-2.5 h-2.5 text-yellow-500" />
+                  )}
                   <span className={`text-[9px] ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{result.server_ip}</span>
                 </div>
                 <div className="flex flex-1">
@@ -363,11 +396,13 @@ export default function HomePage() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{version}</span>
+            {/* 開機自啟動功能暫時停用
             <button onClick={toggleAutostart} className={`flex items-center gap-1.5 text-[10px] transition-colors ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-500 hover:text-zinc-700'}`}>
               <Power className={`w-3 h-3 ${autostart ? 'text-emerald-400' : ''}`} />
               <span>開機啟動</span>
               <span className={`w-1.5 h-1.5 rounded-full ${autostart ? 'bg-emerald-400' : isDark ? 'bg-zinc-600' : 'bg-zinc-400'}`} />
             </button>
+            */}
           </div>
           <div className="flex items-center gap-3">
             <button

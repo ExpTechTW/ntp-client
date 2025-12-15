@@ -12,6 +12,43 @@ use tauri::{
 };
 use tauri_plugin_updater::UpdaterExt;
 
+/// Windows: 檢查是否以管理員權限執行，如果不是則重新啟動並請求 UAC
+#[cfg(target_os = "windows")]
+fn ensure_admin() {
+    use std::process::Command;
+
+    // 檢查是否已經是管理員
+    let is_admin = Command::new("net")
+        .args(["session"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !is_admin {
+        // 取得當前執行檔路徑
+        if let Ok(exe_path) = std::env::current_exe() {
+            let exe_str = exe_path.to_string_lossy();
+
+            // 使用 PowerShell 以管理員權限重新啟動
+            let _ = Command::new("powershell")
+                .args([
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    &format!(
+                        "Start-Process '{}' -Verb RunAs",
+                        exe_str.replace("'", "''")
+                    ),
+                ])
+                .spawn();
+
+            // 退出當前非管理員實例
+            std::process::exit(0);
+        }
+    }
+}
+
 async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
     if let Some(update) = app.updater()?.check().await? {
         let mut downloaded = 0;
@@ -36,7 +73,18 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
 }
 
 fn main() {
+    // Windows: 確保以管理員權限執行
+    #[cfg(target_os = "windows")]
+    ensure_admin();
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 當已有實例運行時，顯示已存在的視窗
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
