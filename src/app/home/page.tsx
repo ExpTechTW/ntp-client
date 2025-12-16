@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Power, Globe, Activity, Clock, Package, GitCompare, Sun, Moon } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-shell'
-import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { useTranslation } from 'react-i18next'
 import '@/i18n'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -88,7 +87,6 @@ export default function HomePage() {
   const [result, setResult] = useState<NtpResult | null>(null)
   const [now, setNow] = useState(new Date())
   const [countdown, setCountdown] = useState(60)
-  const [autostart, setAutostart] = useState(false)
   const [tab, setTab] = useState<TabId>('time')
   const [isCompact, setIsCompact] = useState(false)
   const [version, setVersion] = useState('')
@@ -130,17 +128,9 @@ export default function HomePage() {
     }
   }
 
-  const toggleAutostart = async () => {
-    try {
-      autostart ? await disable() : await enable()
-      setAutostart(!autostart)
-    } catch {}
-  }
-
   useEffect(() => {
     setNow(new Date())
     refs.current.time = setInterval(() => setNow(new Date()), 50)
-    isEnabled().then(setAutostart).catch(() => {})
     getVersion().then(v => setVersion(`v${v}`)).catch(() => {})
 
     // 讀取主題設定
@@ -348,11 +338,6 @@ export default function HomePage() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{version}</span>
-            <button onClick={toggleAutostart} className={`flex items-center gap-1.5 text-[10px] transition-colors ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-500 hover:text-zinc-700'}`}>
-              <Power className={`w-3 h-3 ${autostart ? 'text-emerald-400' : ''}`} />
-              <span>開機啟動</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${autostart ? 'bg-emerald-400' : isDark ? 'bg-zinc-600' : 'bg-zinc-400'}`} />
-            </button>
           </div>
           <div className="flex items-center gap-3">
             <button
