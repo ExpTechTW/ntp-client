@@ -81,25 +81,30 @@ jobs:
           cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
           # 構建 aarch64 版本
           cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
-          # 創建 binaries 目錄
-          mkdir -p binaries
-          # 創建 universal binary 並放到 binaries 目錄（使用 Tauri 要求的命名格式）
+          # 創建 universal-apple-darwin 目錄結構（Tauri universal build 會在這裡找）
+          mkdir -p target/universal-apple-darwin/release
+          # 創建 universal binary（直接放在 Tauri 期望的位置）
           lipo -create \
             target/x86_64-apple-darwin/release/ntp-client-sidecar \
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
-            -output binaries/ntp-client-sidecar-universal-apple-darwin
+            -output target/universal-apple-darwin/release/ntp-client-sidecar
           # 簽名 sidecar
-          codesign --force --sign - --timestamp=none --options runtime binaries/ntp-client-sidecar-universal-apple-darwin || true
+          codesign --force --sign - --timestamp=none --options runtime target/universal-apple-darwin/release/ntp-client-sidecar || true
           # 驗證
-          ls -la binaries/
-          # 創建 macOS 專用配置文件，包含 externalBin
+          echo "=== Sidecar binary created ==="
+          ls -la target/universal-apple-darwin/release/ntp-client-sidecar
+          file target/universal-apple-darwin/release/ntp-client-sidecar
+          # 創建 macOS 專用配置文件
+          # externalBin 路徑格式：Tauri 會自動在 target/{target-triple}/release/ 目錄尋找
           cat > tauri.macos.conf.json << 'EOF'
           {
             "bundle": {
-              "externalBin": ["binaries/ntp-client-sidecar"]
+              "externalBin": ["ntp-client-sidecar"]
             }
           }
           EOF
+          echo "=== tauri.macos.conf.json ==="
+          cat tauri.macos.conf.json
 
       - name: Build and Release (macOS)
         if: matrix.platform == 'macos-latest'
