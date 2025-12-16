@@ -19,15 +19,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [],
     "macOS": {
       "minimumSystemVersion": "10.13",
       "entitlements": "./Entitlements.plist"
     },
-    "linux": { "appimage": { "bundleMediaFramework": true } },
+    "linux": { "appimage": { "bundleMediaFramework": false } },
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "compression": "lzma"
       }
     }
   },
