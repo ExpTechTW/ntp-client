@@ -166,22 +166,22 @@ export default function HomePage() {
       <div className="h-screen bg-zinc-950 flex items-center justify-center select-none overflow-hidden">
         <div className="text-center">
           <div className="flex items-baseline justify-center font-mono">
-            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{hh[0]}</Digit>
-            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{hh[1]}</Digit>
-            <span className="text-5xl font-bold text-white">:</span>
-            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{mm[0]}</Digit>
-            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{mm[1]}</Digit>
-            <span className="text-5xl font-bold text-white">:</span>
-            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{ss[0]}</Digit>
-            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{ss[1]}</Digit>
-            <span className="text-xl text-zinc-500">.</span>
-            <Digit className="text-xl text-zinc-500 w-[1ch]">{ms[0]}</Digit>
-            <Digit className="text-xl text-zinc-500 w-[1ch]">{ms[1]}</Digit>
-            <Digit className="text-xl text-zinc-500 w-[1ch]">{ms[2]}</Digit>
+            <Digit className="text-3xl font-bold text-white w-[1.2ch]">{hh[0]}</Digit>
+            <Digit className="text-3xl font-bold text-white w-[1.2ch]">{hh[1]}</Digit>
+            <span className="text-3xl font-bold text-white">:</span>
+            <Digit className="text-3xl font-bold text-white w-[1.2ch]">{mm[0]}</Digit>
+            <Digit className="text-3xl font-bold text-white w-[1.2ch]">{mm[1]}</Digit>
+            <span className="text-3xl font-bold text-white">:</span>
+            <Digit className="text-3xl font-bold text-white w-[1.2ch]">{ss[0]}</Digit>
+            <Digit className="text-3xl font-bold text-white w-[1.2ch]">{ss[1]}</Digit>
+            <span className="text-base text-zinc-500">.</span>
+            <Digit className="text-base text-zinc-500 w-[1ch]">{ms[0]}</Digit>
+            <Digit className="text-base text-zinc-500 w-[1ch]">{ms[1]}</Digit>
+            <Digit className="text-base text-zinc-500 w-[1ch]">{ms[2]}</Digit>
           </div>
-          <p className="text-[10px] text-zinc-600 mt-1" suppressHydrationWarning>{date}</p>
+          <p className="text-[9px] text-zinc-600 mt-0.5" suppressHydrationWarning>{date}</p>
           {status && (
-            <p className={`text-[10px] mt-0.5 font-mono ${status.color}`}>
+            <p className={`text-[9px] font-mono ${status.color}`}>
               {result!.offset >= 0 ? '+' : ''}{fmtS(result!.offset)}
             </p>
           )}
