@@ -206,18 +206,26 @@ export default function HomePage() {
       if (autostartEnabled) {
         const res = JSON.parse(await invoke<string>('disable_autostart'))
         if (res.success) {
-          setAutostartEnabled(false)
+          const status = JSON.parse(await invoke<string>('is_autostart_enabled'))
+          setAutostartEnabled(status.enabled)
+        } else {
+          console.error('停用開機啟動失敗:', res.message)
         }
       } else {
         const res = JSON.parse(await invoke<string>('enable_autostart'))
         if (res.success) {
-          setAutostartEnabled(true)
+          const status = JSON.parse(await invoke<string>('is_autostart_enabled'))
+          setAutostartEnabled(status.enabled)
         } else {
           console.error('啟用開機啟動失敗:', res.message)
         }
       }
     } catch (e) {
       console.error('切換開機啟動失敗:', e)
+      try {
+        const status = JSON.parse(await invoke<string>('is_autostart_enabled'))
+        setAutostartEnabled(status.enabled)
+      } catch {}
     } finally {
       setIsTogglingAutostart(false)
     }
