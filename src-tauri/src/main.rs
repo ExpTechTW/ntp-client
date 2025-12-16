@@ -179,8 +179,13 @@ fn main() {
                 })
                 .build(app)?;
 
+            let update_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let _ = update(handle).await;
+                let _ = update(update_handle.clone()).await;
+                loop {
+                    tokio::time::sleep(tokio::time::Duration::from_secs(300)).await;
+                    let _ = update(update_handle.clone()).await;
+                }
             });
 
             let sync_handle = app.handle().clone();
