@@ -119,21 +119,9 @@ fn main() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            let app_data_dir = app.path().app_data_dir().ok();
-            let is_first_launch = app_data_dir
-                .as_ref()
-                .map(|dir| !dir.join(".launched").exists())
-                .unwrap_or(true);
-
-            if is_first_launch {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
-                if let Some(dir) = app_data_dir {
-                    let _ = std::fs::create_dir_all(&dir);
-                    let _ = std::fs::write(dir.join(".launched"), "1");
-                }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
             }
 
             let handle = app.handle().clone();
