@@ -12,19 +12,33 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": ["nsis", "app", "appimage"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "macOS": { "minimumSystemVersion": "10.13" },
-    "linux": { "appimage": { "bundleMediaFramework": true } }
+    "linux": { "appimage": { "bundleMediaFramework": true } },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser"
+      }
+    }
   },
   "app": {
-    "windows": [{
-      "title": "NTP Client",
-      "width": 840,
-      "height": 630,
-      "resizable": false,
-      "maximizable": false,
-      "devtools": true
-    }],
+    "windows": [
+      {
+        "title": "NTP Client",
+        "width": 840,
+        "height": 630,
+        "resizable": false,
+        "maximizable": false,
+        "devtools": true
+      }
+    ],
     "security": {
       "csp": {
         "default-src": ["'self'", "ipc:", "http://ipc.localhost"],
@@ -32,17 +46,28 @@
         "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         "style-src": ["'self'", "'unsafe-inline'"]
       },
-      "capabilities": [{
-        "identifier": "main",
-        "windows": ["*"],
-        "permissions": ["core:default", "shell:allow-open", "updater:default"]
-      }]
+      "capabilities": [
+        {
+          "identifier": "main",
+          "windows": ["*"],
+          "permissions": [
+            "core:default",
+            "shell:allow-open",
+            "updater:default",
+            "autostart:allow-enable",
+            "autostart:allow-disable",
+            "autostart:allow-is-enabled"
+          ]
+        }
+      ]
     }
   },
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMwNzQ2MEY3NjdEM0QyQzgKUldUSTB0Tm45MkIwd0wzcXlZbis3cmJCMXFoeG1neGhMOFNLdjVSdWdhZmZERDY2K3F4RmRMc04K",
-      "endpoints": ["https://github.com/ExpTechTW/ntp-client/releases/latest/download/latest.json"],
+      "endpoints": [
+        "https://github.com/ExpTechTW/ntp-client/releases/latest/download/latest.json"
+      ],
       "windows": { "installMode": "passive" }
     }
   }

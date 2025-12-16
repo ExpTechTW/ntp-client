@@ -37,6 +37,18 @@ const NTP_PACKET_SIZE: usize = 48;
 const NTP_PORT: u16 = 123;
 const NTP_TIMEOUT_SECS: u64 = 5;
 
+fn unix_ms_to_ntp(unix_ms: f64) -> (u32, u32) {
+    let unix_secs = unix_ms / 1000.0;
+    let ntp_secs = (unix_secs + NTP_TO_UNIX_EPOCH as f64) as u32;
+    let fraction = ((unix_ms % 1000.0) / 1000.0 * 4294967296.0) as u32;
+    (ntp_secs, fraction)
+}
+
+fn write_ntp_timestamp(packet: &mut [u8], offset: usize, secs: u32, frac: u32) {
+    packet[offset..offset + 4].copy_from_slice(&secs.to_be_bytes());
+    packet[offset + 4..offset + 8].copy_from_slice(&frac.to_be_bytes());
+}
+
 fn extract_ntp_timestamp(packet: &[u8], offset: usize) -> (u64, u64) {
     let seconds = u32::from_be_bytes([
         packet[offset],
@@ -87,7 +99,7 @@ fn decode_reference_id(ref_id_bytes: [u8; 4], stratum: u8) -> String {
 
 pub fn query_ntp(server: &str) -> Result<NtpResult, NtpError> {
     let mut ntp_packet = [0u8; NTP_PACKET_SIZE];
-    ntp_packet[0] = 0x1b;
+    ntp_packet[0] = 0x23;
 
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| NtpError {
         success: false,
@@ -105,17 +117,20 @@ pub fn query_ntp(server: &str) -> Result<NtpResult, NtpError> {
 
     let server_addr = format!("{}:{}", server, NTP_PORT);
 
-    let t1_system = SystemTime::now();
+    let t1 = duration_to_unix_ms(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| NtpError {
+        success: false,
+        error: format!("系統時間錯誤: {}", e),
+        code: "TIME_ERROR".to_string(),
+    })?);
+
+    let (t1_secs, t1_frac) = unix_ms_to_ntp(t1);
+    write_ntp_timestamp(&mut ntp_packet, 40, t1_secs, t1_frac);
+
     socket.send_to(&ntp_packet, &server_addr).map_err(|e| NtpError {
         success: false,
         error: format!("無法發送請求: {}", e),
         code: "SEND_ERROR".to_string(),
     })?;
-    let t1 = duration_to_unix_ms(t1_system.duration_since(UNIX_EPOCH).map_err(|e| NtpError {
-        success: false,
-        error: format!("系統時間錯誤: {}", e),
-        code: "TIME_ERROR".to_string(),
-    })?);
 
     let mut response = [0u8; NTP_PACKET_SIZE];
     let (size, peer_addr) = socket.recv_from(&mut response).map_err(|e| NtpError {
@@ -158,11 +173,21 @@ pub fn query_ntp(server: &str) -> Result<NtpResult, NtpError> {
     let (ref_sec, ref_frac) = extract_ntp_timestamp(&response, 16);
     let ref_time = ntp_to_unix_ms(ref_sec, ref_frac);
 
+    let (org_sec, org_frac) = extract_ntp_timestamp(&response, 24);
+    let origin_time = ntp_to_unix_ms(org_sec, org_frac);
+
     let (t2_sec, t2_frac) = extract_ntp_timestamp(&response, 32);
     let t2 = ntp_to_unix_ms(t2_sec, t2_frac);
 
     let (t3_sec, t3_frac) = extract_ntp_timestamp(&response, 40);
     let t3 = ntp_to_unix_ms(t3_sec, t3_frac);
+
+    if (origin_time - t1).abs() > 1.0 {
+        println!(
+            "[NTP] 警告: Origin Timestamp 不匹配 (sent={:.3}, recv={:.3})",
+            t1, origin_time
+        );
+    }
 
     let offset = ((t2 - t1) + (t3 - t4)) / 2.0;
     let delay = (t4 - t1) - (t3 - t2);
