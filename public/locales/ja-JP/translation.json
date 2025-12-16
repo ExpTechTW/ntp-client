@@ -50,6 +50,9 @@
       "t4Received": "T4 受信済み"
     },
     "calcLabels": {
+      "offset": "オフセット",
+      "delay": "遅延",
+      "rtt": "往復時間",
       "processingTime": "処理時間",
       "preSyncOffset": "同期前誤差",
       "postSyncOffset": "同期後誤差",
@@ -60,6 +63,16 @@
       "preSyncMeasure": "同期前測定",
       "postSyncVerify": "同期後検証",
       "improvement": "改善幅"
+    },
+    "packetLabels": {
+      "liVnMode": "LI/VN/Mode",
+      "stratum": "階層",
+      "poll": "ポーリング",
+      "precision": "精度",
+      "rootDelay": "ルート遅延",
+      "rootDisp": "ルート分散",
+      "refId": "参照 ID",
+      "refTime": "参照時刻"
     },
     "sidecar": {
       "installRequired": "システム時刻を設定するには Sidecar Server のインストールが必要です",

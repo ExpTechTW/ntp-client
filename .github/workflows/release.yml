@@ -78,54 +78,40 @@ jobs:
           cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
           cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
 
+          # Create binaries directory (relative to tauri.conf.json)
           mkdir -p binaries
 
-          # Copy architecture-specific binaries (Tauri needs these during compilation)
-          cp target/x86_64-apple-darwin/release/ntp-client-sidecar binaries/ntp-client-sidecar-x86_64-apple-darwin
-          cp target/aarch64-apple-darwin/release/ntp-client-sidecar binaries/ntp-client-sidecar-aarch64-apple-darwin
-
-          # Create universal binary using lipo (for final bundle)
+          # Create universal binary using lipo
           lipo -create \
-            binaries/ntp-client-sidecar-x86_64-apple-darwin \
-            binaries/ntp-client-sidecar-aarch64-apple-darwin \
+            target/x86_64-apple-darwin/release/ntp-client-sidecar \
+            target/aarch64-apple-darwin/release/ntp-client-sidecar \
             -output binaries/ntp-client-sidecar-universal-apple-darwin
 
-          # Ad-hoc sign all binaries
-          codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-x86_64-apple-darwin || true
-          codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-aarch64-apple-darwin || true
+          # Create symlinks for arch-specific names pointing to universal binary
+          # This is the workaround for Tauri universal build sidecar bundling
+          cd binaries
+          ln -sf ntp-client-sidecar-universal-apple-darwin ntp-client-sidecar-x86_64-apple-darwin
+          ln -sf ntp-client-sidecar-universal-apple-darwin ntp-client-sidecar-aarch64-apple-darwin
+          cd ..
+
+          # Ad-hoc sign the universal binary
           codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-universal-apple-darwin || true
 
-          # Verify all files exist
-          echo "=== Sidecar binaries in src-tauri/binaries ==="
+          # Verify
+          echo "=== Sidecar binaries ==="
           ls -la binaries/
           file binaries/*
-          echo "=== Full paths ==="
-          ls -la $(pwd)/binaries/
 
       - name: Patch tauri.conf.json for macOS sidecar
         if: matrix.platform == 'macos-latest'
         run: |
           cd src-tauri
-          # Use jq to add externalBin to tauri.conf.json
+          # Add externalBin - path relative to tauri.conf.json
+          # Tauri will look for binaries/ntp-client-sidecar-$TARGET_TRIPLE
           jq '.bundle.externalBin = ["binaries/ntp-client-sidecar"]' tauri.conf.json > tauri.conf.json.tmp
           mv tauri.conf.json.tmp tauri.conf.json
           echo "=== Updated tauri.conf.json ==="
           cat tauri.conf.json
-          echo ""
-          echo "=== Verifying sidecar files exist ==="
-          echo "PWD: $(pwd)"
-          echo "Looking for: binaries/ntp-client-sidecar-*"
-          ls -la binaries/ || echo "binaries/ directory not found"
-          echo ""
-          echo "=== Checking expected paths ==="
-          for target in x86_64-apple-darwin aarch64-apple-darwin universal-apple-darwin; do
-            path="binaries/ntp-client-sidecar-$target"
-            if [ -f "$path" ]; then
-              echo "✓ EXISTS: $path ($(file "$path" | cut -d: -f2))"
-            else
-              echo "✗ MISSING: $path"
-            fi
-          done
 
       - name: Build and Release (macOS)
         if: matrix.platform == 'macos-latest'

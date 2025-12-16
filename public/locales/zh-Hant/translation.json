@@ -50,6 +50,9 @@
       "t4Received": "T4 收到"
     },
     "calcLabels": {
+      "offset": "偏移量",
+      "delay": "延遲",
+      "rtt": "往返時間",
       "processingTime": "處理時間",
       "preSyncOffset": "校正前誤差",
       "postSyncOffset": "校正後誤差",
@@ -60,6 +63,16 @@
       "preSyncMeasure": "同步前測量",
       "postSyncVerify": "同步後驗證",
       "improvement": "改善幅度"
+    },
+    "packetLabels": {
+      "liVnMode": "LI/VN/Mode",
+      "stratum": "階層",
+      "poll": "輪詢",
+      "precision": "精度",
+      "rootDelay": "根延遲",
+      "rootDisp": "根離散",
+      "refId": "參考 ID",
+      "refTime": "參考時間"
     },
     "sidecar": {
       "installRequired": "需要安裝 Sidecar Server 才能設定系統時間",

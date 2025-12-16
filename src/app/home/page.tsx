@@ -394,23 +394,23 @@ export default function HomePage() {
 
                 {tab === 'calc' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-                    <Info label="Offset" value={<span className={status?.color}>{result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}</span>} sub="((T2-T1)+(T3-T4))/2" isDark={isDark} />
-                    <Info label="Delay" value={fmtS(result.delay)} sub="(T4-T1)-(T3-T2)" isDark={isDark} />
-                    <Info label="RTT" value={fmtS(result.t4 - result.t1)} sub="T4-T1" isDark={isDark} />
+                    <Info label={t('home.calcLabels.offset')} value={<span className={status?.color}>{result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}</span>} sub="((T2-T1)+(T3-T4))/2" isDark={isDark} />
+                    <Info label={t('home.calcLabels.delay')} value={fmtS(result.delay)} sub="(T4-T1)-(T3-T2)" isDark={isDark} />
+                    <Info label={t('home.calcLabels.rtt')} value={fmtS(result.t4 - result.t1)} sub="T4-T1" isDark={isDark} />
                     <Info label={t('home.calcLabels.processingTime')} value={fmtS(result.t3 - result.t2)} sub="T3-T2" isDark={isDark} />
                   </div>
                 )}
 
                 {tab === 'packet' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-                    <Info label="LI/VN/Mode" value={`0x${((result.leap << 6) | (result.version << 3) | result.mode).toString(16).padStart(2, '0')}`} sub={`LI=${result.leap} VN=${result.version} M=${result.mode}`} isDark={isDark} />
-                    <Info label="Stratum" value={result.stratum} sub={getStratumDesc(result.stratum, t)} isDark={isDark} />
-                    <Info label="Poll" value={`${result.poll}`} sub={`${Math.pow(2, result.poll)}s`} isDark={isDark} />
-                    <Info label="Precision" value={`${result.precision}`} sub={`${Math.pow(2, result.precision).toExponential(1)}s`} isDark={isDark} />
-                    <Info label="Root Delay" value={fmtS(result.root_delay)} isDark={isDark} />
-                    <Info label="Root Disp" value={fmtS(result.root_dispersion)} isDark={isDark} />
-                    <Info label="Ref ID" value={result.ref_id || '-'} isDark={isDark} />
-                    <Info label="Ref Time" value={result.ref_time ? fmtTs(result.ref_time) : '-'} isDark={isDark} />
+                    <Info label={t('home.packetLabels.liVnMode')} value={`0x${((result.leap << 6) | (result.version << 3) | result.mode).toString(16).padStart(2, '0')}`} sub={`LI=${result.leap} VN=${result.version} M=${result.mode}`} isDark={isDark} />
+                    <Info label={t('home.packetLabels.stratum')} value={result.stratum} sub={getStratumDesc(result.stratum, t)} isDark={isDark} />
+                    <Info label={t('home.packetLabels.poll')} value={`${result.poll}`} sub={`${Math.pow(2, result.poll)}s`} isDark={isDark} />
+                    <Info label={t('home.packetLabels.precision')} value={`${result.precision}`} sub={`${Math.pow(2, result.precision).toExponential(1)}s`} isDark={isDark} />
+                    <Info label={t('home.packetLabels.rootDelay')} value={fmtS(result.root_delay)} isDark={isDark} />
+                    <Info label={t('home.packetLabels.rootDisp')} value={fmtS(result.root_dispersion)} isDark={isDark} />
+                    <Info label={t('home.packetLabels.refId')} value={result.ref_id || '-'} isDark={isDark} />
+                    <Info label={t('home.packetLabels.refTime')} value={result.ref_time ? fmtTs(result.ref_time) : '-'} isDark={isDark} />
                   </div>
                 )}
 
@@ -419,7 +419,7 @@ export default function HomePage() {
                     <Info label={t('home.calcLabels.preSyncOffset')} value={<span className={getStatus(result.pre_sync_offset, t).color}>{result.pre_sync_offset >= 0 ? '+' : ''}{fmtS(result.pre_sync_offset)}</span>} sub={t('home.calcSubs.preSyncMeasure')} isDark={isDark} />
                     <Info label={t('home.calcLabels.postSyncOffset')} value={<span className={status?.color}>{result.post_sync_offset >= 0 ? '+' : ''}{fmtS(result.post_sync_offset)}</span>} sub={t('home.calcSubs.postSyncVerify')} isDark={isDark} />
                     <Info label={t('home.calcLabels.correctionAmount')} value={fmtS(result.pre_sync_offset - result.post_sync_offset)} sub={t('home.calcSubs.improvement')} isDark={isDark} />
-                    <Info label="Delay" value={fmtS(result.delay)} sub={t('home.calcLabels.networkDelay')} isDark={isDark} />
+                    <Info label={t('home.calcLabels.delay')} value={fmtS(result.delay)} sub={t('home.calcLabels.networkDelay')} isDark={isDark} />
                   </div>
                 )}
               </div>

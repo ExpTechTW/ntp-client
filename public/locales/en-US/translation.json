@@ -50,6 +50,9 @@
       "t4Received": "T4 Received"
     },
     "calcLabels": {
+      "offset": "Offset",
+      "delay": "Delay",
+      "rtt": "RTT",
       "processingTime": "Processing Time",
       "preSyncOffset": "Pre-Sync Offset",
       "postSyncOffset": "Post-Sync Offset",
@@ -60,6 +63,16 @@
       "preSyncMeasure": "Pre-sync measurement",
       "postSyncVerify": "Post-sync verification",
       "improvement": "Improvement"
+    },
+    "packetLabels": {
+      "liVnMode": "LI/VN/Mode",
+      "stratum": "Stratum",
+      "poll": "Poll",
+      "precision": "Precision",
+      "rootDelay": "Root Delay",
+      "rootDisp": "Root Dispersion",
+      "refId": "Ref ID",
+      "refTime": "Ref Time"
     },
     "sidecar": {
       "installRequired": "Sidecar Server installation required to set system time",
