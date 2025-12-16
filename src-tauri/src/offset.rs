@@ -353,27 +353,51 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
 
     let previous_time = get_current_time_ms();
 
-    let ntp_result = match ntp::query_ntp(&server) {
-        Ok(r) => {
-            println!(
-                "[SYNC] NTP 查詢: delay={:.3}ms offset={:.3}ms",
-                r.delay, r.offset
-            );
-            r
-        }
-        Err(e) => {
-            println!("[SYNC] NTP 查詢失敗: {}", e.error);
-            return serde_json::to_string(&SyncError {
-                success: false,
-                error: e.error,
-                code: e.code,
-            })
-            .map_err(|e| e.to_string());
-        }
-    };
+    // === 3 次 NTP 測量取中位數 ===
+    let mut offsets: Vec<f64> = Vec::new();
+    let mut delays: Vec<f64> = Vec::new();
+    let mut last_result: Option<ntp::NtpResult> = None;
 
-    // === 輔助函數：執行一次精準同步 ===
-    // 等到本地時間到達 wait_until_local 時，設定系統時間為 target_ms
+    for i in 1..=3 {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        match ntp::query_ntp(&server) {
+            Ok(r) => {
+                println!(
+                    "[SYNC] 測量 {}/3: offset={:.3}ms delay={:.3}ms",
+                    i, r.offset, r.delay
+                );
+                offsets.push(r.offset);
+                delays.push(r.delay);
+                last_result = Some(r);
+            }
+            Err(e) => {
+                println!("[SYNC] 測量 {}/3 失敗: {}", i, e.error);
+            }
+        }
+    }
+
+    if offsets.is_empty() {
+        return serde_json::to_string(&SyncError {
+            success: false,
+            error: "所有 NTP 查詢都失敗".to_string(),
+            code: "NTP_ERROR".to_string(),
+        })
+        .map_err(|e| e.to_string());
+    }
+
+    // 取中位數
+    offsets.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    delays.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let median_offset = offsets[offsets.len() / 2];
+    let median_delay = delays[delays.len() / 2];
+    let ntp_result = last_result.unwrap();
+
+    println!(
+        "[SYNC] 中位數: offset={:.3}ms delay={:.3}ms (共{}次測量)",
+        median_offset, median_delay, offsets.len()
+    );
+
+    // === 精準同步：等到整秒時設定時間 ===
     fn do_sync(target_ms: f64, wait_until_local: f64) -> Result<(), SetTimeError> {
         let wait_ms = wait_until_local - get_current_time_ms();
 
@@ -394,86 +418,20 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         Ok(())
     }
 
-    // === 第一次同步：修正本地大偏差 ===
-    let correct_time_at_t4 = ntp_result.t4 + ntp_result.offset;
+    // 計算目標時間
     let now_local = get_current_time_ms();
-    let elapsed_since_t4 = now_local - ntp_result.t4;
-    let correct_time_now = correct_time_at_t4 + elapsed_since_t4;
+    let correct_time_now = now_local + median_offset;
     let next_second = ((correct_time_now / 1000.0).floor() + 1.0) * 1000.0;
-
-    // 當正確時間到達 next_second 時，本地時間應該是多少？
     let wait_until_local = now_local + (next_second - correct_time_now);
 
-    println!("[SYNC] 第一次同步: 修正本地大偏差, 目標={:.3}", next_second);
-
-    if let Err(e) = do_sync(next_second, wait_until_local) {
-        println!("[SYNC] 第一次同步失敗: {}", e.error);
-        return serde_json::to_string(&SyncError {
-            success: false,
-            error: e.error,
-            code: e.code,
-        })
-        .map_err(|e| e.to_string());
-    }
-
-    // === 第二次同步：測量 estimated_cmd_delay_ms ===
-    // 第一次同步後，本地時間應該接近正確，直接用本地時間計算
-    std::thread::sleep(std::time::Duration::from_millis(200));
-
-    let now_local2 = get_current_time_ms();
-    let next_second2 = ((now_local2 / 1000.0).floor() + 1.0) * 1000.0;
-    let wait_until_local2 = next_second2; // 本地時間 = 正確時間
-
-    println!("[SYNC] 第二次同步: 測量執行延遲, 目標={:.3}", next_second2);
-
-    if let Err(e) = do_sync(next_second2, wait_until_local2) {
-        println!("[SYNC] 第二次同步失敗: {}", e.error);
-        return serde_json::to_string(&SyncError {
-            success: false,
-            error: e.error,
-            code: e.code,
-        })
-        .map_err(|e| e.to_string());
-    }
-
-    // 測量第二次同步後的 offset = 執行延遲造成的誤差
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    let measured_offset = match ntp::query_ntp(&server) {
-        Ok(r) => {
-            println!("[SYNC] 第二次同步後 offset={:.3}ms (執行延遲造成的誤差)", r.offset);
-            r.offset
-        }
-        Err(_) => {
-            println!("[SYNC] 無法測量第二次同步結果");
-            0.0
-        }
-    };
-
-    // === 第三次同步：補償執行延遲 ===
-    // measured_offset > 0 表示本地快了（settimeofday 執行太慢）
-    // 需要提前執行 settimeofday，即減少等待時間
-    let now_local3 = get_current_time_ms();
-    let correct_time_now3 = now_local3 + measured_offset;
-    let mut next_second3 = ((correct_time_now3 / 1000.0).floor() + 1.0) * 1000.0;
-
-    // 原本要等到本地時間 = next_second3 時執行
-    // 但要提前 measured_offset 毫秒執行
-    let mut wait_until_local3 = next_second3 - measured_offset;
-
-    // 如果已經錯過執行時間，延後一個週期
-    if wait_until_local3 < now_local3 + 10.0 {
-        next_second3 += 1000.0;
-        wait_until_local3 += 1000.0;
-        println!("[SYNC] 錯過執行時間，延後一個週期");
-    }
-
     println!(
-        "[SYNC] 第三次同步: 目標={:.3} 提前={:.3}ms 等待={:.3}ms",
-        next_second3, measured_offset, wait_until_local3 - now_local3
+        "[SYNC] 同步: 目標={:.3} 等待={:.3}ms",
+        next_second,
+        wait_until_local - now_local
     );
 
-    if let Err(e) = do_sync(next_second3, wait_until_local3) {
-        println!("[SYNC] 第三次同步失敗: {}", e.error);
+    if let Err(e) = do_sync(next_second, wait_until_local) {
+        println!("[SYNC] 同步失敗: {}", e.error);
         return serde_json::to_string(&SyncError {
             success: false,
             error: e.error,
@@ -482,36 +440,30 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         .map_err(|e| e.to_string());
     }
 
-    // 驗證最終結果
+    // 驗證結果
     std::thread::sleep(std::time::Duration::from_millis(100));
     let new_time = get_current_time_ms();
 
     let post_sync_offset = match ntp::query_ntp(&server) {
-        Ok(verify_result) => {
-            println!(
-                "[SYNC] 最終驗證: offset={:.3}ms delay={:.3}ms",
-                verify_result.offset, verify_result.delay
-            );
-            verify_result.offset
+        Ok(r) => {
+            println!("[SYNC] 驗證: offset={:.3}ms delay={:.3}ms", r.offset, r.delay);
+            r.offset
         }
-        Err(_) => {
-            println!("[SYNC] 驗證查詢失敗");
-            0.0
-        }
+        Err(_) => 0.0,
     };
 
     println!(
-        "[SYNC] 完成: 原始偏差={:.3}ms 最終偏差={:.3}ms 執行延遲={:.3}ms",
-        ntp_result.offset, post_sync_offset, measured_offset
+        "[SYNC] 完成: 原始偏差={:.3}ms 最終偏差={:.3}ms",
+        median_offset, post_sync_offset
     );
 
     serde_json::to_string(&SyncResult {
         success: true,
-        message: format!("三次同步完成，補償延遲 {:.1}ms", measured_offset),
+        message: format!("同步完成 (3次測量中位數)"),
         server: ntp_result.server,
         server_ip: ntp_result.server_ip,
         offset: post_sync_offset,
-        delay: ntp_result.delay,
+        delay: median_delay,
         previous_time,
         new_time,
         t1: ntp_result.t1,

@@ -155,19 +155,33 @@ export default function HomePage() {
   const date = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} 週${WEEKDAYS[now.getDay()]}`
   const status = result ? getStatus(result.offset) : null
 
+  const Digit = ({ children, className = '' }: { children: string; className?: string }) => (
+    <span className={`inline-block text-center ${className}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {children}
+    </span>
+  )
+
   if (isCompact) {
     return (
       <div className="h-screen bg-zinc-950 flex items-center justify-center select-none overflow-hidden">
         <div className="text-center">
-          <div className="flex items-baseline justify-center">
-            <span className="text-5xl font-bold text-white tabular-nums tracking-tight" suppressHydrationWarning>
-              {hh}:{mm}:{ss}
-            </span>
-            <span className="text-xl text-zinc-500 tabular-nums" suppressHydrationWarning>.{ms}</span>
+          <div className="flex items-baseline justify-center font-mono">
+            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{hh[0]}</Digit>
+            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{hh[1]}</Digit>
+            <span className="text-5xl font-bold text-white">:</span>
+            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{mm[0]}</Digit>
+            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{mm[1]}</Digit>
+            <span className="text-5xl font-bold text-white">:</span>
+            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{ss[0]}</Digit>
+            <Digit className="text-5xl font-bold text-white w-[1.2ch]">{ss[1]}</Digit>
+            <span className="text-xl text-zinc-500">.</span>
+            <Digit className="text-xl text-zinc-500 w-[1ch]">{ms[0]}</Digit>
+            <Digit className="text-xl text-zinc-500 w-[1ch]">{ms[1]}</Digit>
+            <Digit className="text-xl text-zinc-500 w-[1ch]">{ms[2]}</Digit>
           </div>
           <p className="text-[10px] text-zinc-600 mt-1" suppressHydrationWarning>{date}</p>
           {status && (
-            <p className={`text-[10px] mt-0.5 ${status.color}`}>
+            <p className={`text-[10px] mt-0.5 font-mono ${status.color}`}>
               {result!.offset >= 0 ? '+' : ''}{fmtS(result!.offset)}
             </p>
           )}
@@ -180,28 +194,33 @@ export default function HomePage() {
     <div className="h-screen bg-zinc-950 text-white select-none overflow-hidden flex flex-col">
       <div className="absolute top-1.5 right-1.5 z-20"><LanguageSwitcher /></div>
 
-      {/* 時間主體 */}
       <div className="flex-1 flex flex-col items-center justify-center min-h-0 py-2">
         <p className="text-[10px] text-zinc-600" suppressHydrationWarning>{date}</p>
-        <div className="flex items-baseline justify-center mt-1">
-          <span className="text-6xl sm:text-7xl md:text-8xl font-bold tabular-nums tracking-tighter" suppressHydrationWarning>
-            {hh}:{mm}:{ss}
-          </span>
-          <span className="text-2xl sm:text-3xl text-zinc-500 tabular-nums" suppressHydrationWarning>.{ms}</span>
+        <div className="flex items-baseline justify-center mt-1 font-mono">
+          <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{hh[0]}</Digit>
+          <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{hh[1]}</Digit>
+          <span className="text-6xl sm:text-7xl md:text-8xl font-bold">:</span>
+          <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{mm[0]}</Digit>
+          <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{mm[1]}</Digit>
+          <span className="text-6xl sm:text-7xl md:text-8xl font-bold">:</span>
+          <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{ss[0]}</Digit>
+          <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{ss[1]}</Digit>
+          <span className="text-2xl sm:text-3xl text-zinc-500">.</span>
+          <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[0]}</Digit>
+          <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[1]}</Digit>
+          <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[2]}</Digit>
         </div>
         {result?.success && status && (
           <div className="flex items-center gap-2 mt-2">
             <span className={`text-xs ${status.color}`}>{status.label}</span>
-            <span className={`text-sm font-mono tabular-nums ${status.color}`}>
+            <span className={`text-sm font-mono ${status.color}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
               {result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}
             </span>
           </div>
         )}
       </div>
 
-      {/* 底部面板 */}
       <div className="shrink-0 px-2 pb-2 space-y-1.5">
-        {/* 伺服器列 */}
         <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded px-2 py-1">
           <Globe className="w-3 h-3 text-zinc-600" />
           <select
@@ -228,7 +247,6 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* 結果面板 */}
         <div className="bg-zinc-900 border border-zinc-800 rounded">
           {result?.success ? (
             <>
@@ -308,7 +326,6 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 底部 */}
         <div className="flex items-center justify-between px-0.5">
           <button onClick={toggleAutostart} className="flex items-center gap-1 text-[9px] text-zinc-600 hover:text-zinc-400">
             <Power className={`w-2.5 h-2.5 ${autostart ? 'text-emerald-500' : ''}`} />
