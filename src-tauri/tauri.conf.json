@@ -34,7 +34,11 @@
         "title": "NTP Client",
         "width": 840,
         "height": 630,
-        "resizable": false,
+        "minWidth": 320,
+        "minHeight": 160,
+        "maxWidth": 840,
+        "maxHeight": 630,
+        "resizable": true,
         "maximizable": false,
         "devtools": true
       }

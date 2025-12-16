@@ -77,35 +77,51 @@ fn set_time_internal(
 
 #[cfg(target_os = "windows")]
 fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
-    let secs = (unix_ms / 1000.0) as i64;
-    let nanos = ((unix_ms % 1000.0) * 1_000_000.0) as u32;
+    use chrono::{Datelike, Timelike};
+    use windows_sys::Win32::Foundation::{GetLastError, SYSTEMTIME};
+    use windows_sys::Win32::System::Time::SetSystemTime;
 
-    let datetime = chrono::DateTime::from_timestamp(secs, nanos).ok_or_else(|| SetTimeError {
+    let secs = (unix_ms / 1000.0) as i64;
+    let millis = (unix_ms % 1000.0) as u16;
+
+    let datetime = chrono::DateTime::from_timestamp(secs, 0).ok_or_else(|| SetTimeError {
         success: false,
         error: "Invalid timestamp".to_string(),
         code: "INVALID_TIMESTAMP".to_string(),
     })?;
 
-    let local: chrono::DateTime<chrono::Local> = datetime.into();
-    let time_str = local.format("%Y-%m-%d %H:%M:%S.%3f").to_string();
+    let utc: chrono::DateTime<chrono::Utc> = datetime.into();
 
-    let output = Command::new("powershell")
-        .args(["-Command", &format!("Set-Date -Date '{}'", time_str)])
-        .output()
-        .map_err(|e| SetTimeError {
-            success: false,
-            error: format!("Failed to execute PowerShell: {}", e),
-            code: "EXEC_ERROR".to_string(),
-        })?;
+    let system_time = SYSTEMTIME {
+        wYear: utc.year() as u16,
+        wMonth: utc.month() as u16,
+        wDayOfWeek: utc.weekday().num_days_from_sunday() as u16,
+        wDay: utc.day() as u16,
+        wHour: utc.hour() as u16,
+        wMinute: utc.minute() as u16,
+        wSecond: utc.second() as u16,
+        wMilliseconds: millis,
+    };
 
-    if output.status.success() {
-        Ok(format!("System time set to {}", time_str))
+    let result = unsafe { SetSystemTime(&system_time) };
+
+    if result != 0 {
+        Ok(format!(
+            "System time set (UTC): {:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
+            system_time.wYear,
+            system_time.wMonth,
+            system_time.wDay,
+            system_time.wHour,
+            system_time.wMinute,
+            system_time.wSecond,
+            system_time.wMilliseconds
+        ))
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let error_code = unsafe { GetLastError() };
         Err(SetTimeError {
             success: false,
-            error: format!("Failed to set time: {}", stderr.trim()),
-            code: if stderr.contains("Access") || stderr.contains("denied") {
+            error: format!("SetSystemTime failed, error code: {}", error_code),
+            code: if error_code == 5 {
                 "PERMISSION_DENIED".to_string()
             } else {
                 "SET_TIME_ERROR".to_string()
