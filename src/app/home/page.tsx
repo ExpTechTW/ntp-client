@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, Power } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-shell'
@@ -91,12 +91,36 @@ export default function HomePage() {
   const [isCompact, setIsCompact] = useState(false)
   const [version, setVersion] = useState('')
   const [isDark, setIsDark] = useState(true)
+  const [autostart, setAutostart] = useState(false)
   const refs = useRef<{ time?: NodeJS.Timeout; sync?: NodeJS.Timeout; cd?: NodeJS.Timeout; syncing?: boolean }>({})
 
   const toggleTheme = () => {
     const newTheme = !isDark
     setIsDark(newTheme)
     localStorage.setItem('theme', newTheme ? 'dark' : 'light')
+  }
+
+  const toggleAutostart = async () => {
+    try {
+      if (autostart) {
+        await invoke('disable_autostart')
+        setAutostart(false)
+      } else {
+        await invoke('enable_autostart')
+        setAutostart(true)
+      }
+    } catch (e) {
+      console.error('Autostart toggle failed:', e)
+    }
+  }
+
+  const checkAutostart = async () => {
+    try {
+      const res = JSON.parse(await invoke<string>('is_autostart_enabled'))
+      setAutostart(res.enabled)
+    } catch {
+      setAutostart(false)
+    }
   }
 
   const query = async (srv: string) => {
@@ -132,6 +156,7 @@ export default function HomePage() {
     setNow(new Date())
     refs.current.time = setInterval(() => setNow(new Date()), 50)
     getVersion().then(v => setVersion(`v${v}`)).catch(() => {})
+    checkAutostart()
 
     // 讀取主題設定
     const savedTheme = localStorage.getItem('theme')
@@ -338,6 +363,11 @@ export default function HomePage() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{version}</span>
+            <button onClick={toggleAutostart} className={`flex items-center gap-1.5 text-[10px] transition-colors ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-500 hover:text-zinc-700'}`}>
+              <Power className={`w-3 h-3 ${autostart ? 'text-emerald-400' : ''}`} />
+              <span>開機啟動</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${autostart ? 'bg-emerald-400' : isDark ? 'bg-zinc-600' : 'bg-zinc-400'}`} />
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <button

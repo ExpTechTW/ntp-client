@@ -103,10 +103,11 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
         wMilliseconds: millis,
     };
 
+    // 先嘗試直接設定（如果已有管理員權限）
     let result = unsafe { SetSystemTime(&system_time) };
 
     if result != 0 {
-        Ok(format!(
+        return Ok(format!(
             "System time set (UTC): {:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
             system_time.wYear,
             system_time.wMonth,
@@ -115,17 +116,67 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
             system_time.wMinute,
             system_time.wSecond,
             system_time.wMilliseconds
-        ))
+        ));
+    }
+
+    let error_code = unsafe { GetLastError() };
+
+    // 錯誤碼 5 = 權限不足，嘗試用 PowerShell 提權
+    if error_code == 5 {
+        // 使用 PowerShell 以管理員權限設定時間
+        let ps_script = format!(
+            r#"Set-Date -Date (Get-Date -Year {} -Month {} -Day {} -Hour {} -Minute {} -Second {} -Millisecond {})"#,
+            system_time.wYear,
+            system_time.wMonth,
+            system_time.wDay,
+            system_time.wHour,
+            system_time.wMinute,
+            system_time.wSecond,
+            system_time.wMilliseconds
+        );
+
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                &format!(
+                    "Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \"{}\"'",
+                    ps_script
+                ),
+            ])
+            .output()
+            .map_err(|e| SetTimeError {
+                success: false,
+                error: format!("執行失敗: {}", e),
+                code: "EXEC_ERROR".to_string(),
+            })?;
+
+        if output.status.success() {
+            Ok(format!(
+                "System time set (UTC): {:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
+                system_time.wYear,
+                system_time.wMonth,
+                system_time.wDay,
+                system_time.wHour,
+                system_time.wMinute,
+                system_time.wSecond,
+                system_time.wMilliseconds
+            ))
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(SetTimeError {
+                success: false,
+                error: format!("設定失敗: {}", stderr),
+                code: "PERMISSION_DENIED".to_string(),
+            })
+        }
     } else {
-        let error_code = unsafe { GetLastError() };
         Err(SetTimeError {
             success: false,
             error: format!("SetSystemTime failed, error code: {}", error_code),
-            code: if error_code == 5 {
-                "PERMISSION_DENIED".to_string()
-            } else {
-                "SET_TIME_ERROR".to_string()
-            },
+            code: "SET_TIME_ERROR".to_string(),
         })
     }
 }
@@ -135,6 +186,7 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
     let secs = (unix_ms / 1000.0).floor() as i64;
     let usecs = ((unix_ms % 1000.0) * 1000.0) as i64;
 
+    // 先嘗試直接設定（如果已有權限）
     let tv = libc::timeval {
         tv_sec: secs,
         tv_usec: usecs as i32,
@@ -152,6 +204,7 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
         ));
     }
 
+    // 需要管理員權限，使用 osascript 請求
     let datetime = chrono::DateTime::from_timestamp(secs, 0).ok_or_else(|| SetTimeError {
         success: false,
         error: "Invalid timestamp".to_string(),
@@ -160,23 +213,42 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
 
     let date_str = datetime.format("%m%d%H%M%Y.%S").to_string();
 
-    if let Ok(output) = Command::new("sudo")
-        .args(["-n", "date", "-u", &date_str])
+    // 使用 osascript 請求管理員權限執行 date 命令
+    let script = format!(
+        r#"do shell script "date -u {}" with administrator privileges"#,
+        date_str
+    );
+
+    let output = Command::new("osascript")
+        .args(["-e", &script])
         .output()
-    {
-        if output.status.success() {
-            return Ok(format!(
-                "System time set (UTC): {}",
-                datetime.format("%Y-%m-%d %H:%M:%S")
-            ));
+        .map_err(|e| SetTimeError {
+            success: false,
+            error: format!("執行失敗: {}", e),
+            code: "EXEC_ERROR".to_string(),
+        })?;
+
+    if output.status.success() {
+        Ok(format!(
+            "System time set (UTC): {}",
+            datetime.format("%Y-%m-%d %H:%M:%S")
+        ))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("User canceled") || stderr.contains("-128") {
+            Err(SetTimeError {
+                success: false,
+                error: "使用者取消授權".to_string(),
+                code: "USER_CANCELED".to_string(),
+            })
+        } else {
+            Err(SetTimeError {
+                success: false,
+                error: format!("設定失敗: {}", stderr),
+                code: "PERMISSION_DENIED".to_string(),
+            })
         }
     }
-
-    Err(SetTimeError {
-        success: false,
-        error: "需要管理員權限".to_string(),
-        code: "PERMISSION_DENIED".to_string(),
-    })
 }
 
 

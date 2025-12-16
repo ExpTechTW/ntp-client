@@ -1,6 +1,7 @@
 fn main() {
-    // Windows: embed manifest requesting administrator privileges (UAC)
-    // Must include Common Controls v6 dependency for Tauri dialog APIs
+    // Windows: embed manifest with Common Controls v6 dependency for Tauri dialog APIs
+    // Note: We use asInvoker here because the app will request admin privileges
+    // via Task Scheduler for elevated autostart, not via UAC on every launch
     #[cfg(target_os = "windows")]
     {
         let mut windows = tauri_build::WindowsAttributes::new();
@@ -21,7 +22,7 @@ fn main() {
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

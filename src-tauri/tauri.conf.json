@@ -43,7 +43,8 @@
         "maxHeight": 630,
         "resizable": true,
         "maximizable": false,
-        "devtools": true
+        "devtools": true,
+        "visible": false
       }
     ],
     "security": {
@@ -59,11 +60,13 @@
           "windows": ["*"],
           "permissions": [
             "core:default",
+            "core:window:allow-show",
+            "core:window:allow-hide",
+            "core:window:allow-close",
+            "core:window:allow-set-focus",
+            "core:tray:default",
             "shell:allow-open",
-            "updater:default",
-            "autostart:allow-enable",
-            "autostart:allow-disable",
-            "autostart:allow-is-enabled"
+            "updater:default"
           ]
         }
       ]
