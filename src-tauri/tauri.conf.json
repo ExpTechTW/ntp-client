@@ -19,7 +19,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "macOS": { "minimumSystemVersion": "10.13" },
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "entitlements": "./Entitlements.plist"
+    },
     "linux": { "appimage": { "bundleMediaFramework": true } },
     "windows": {
       "nsis": {
