@@ -82,11 +82,9 @@ jobs:
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
             -output binaries/ntp-client-sidecar-universal-apple-darwin
           codesign --force --sign - --timestamp=none --options runtime binaries/ntp-client-sidecar-universal-apple-darwin || true
-          cd binaries
-          ln -sf ntp-client-sidecar-universal-apple-darwin ntp-client-sidecar-x86_64-apple-darwin
-          ln -sf ntp-client-sidecar-universal-apple-darwin ntp-client-sidecar-aarch64-apple-darwin
-          ls -la
-          cd ..
+          cp binaries/ntp-client-sidecar-universal-apple-darwin binaries/ntp-client-sidecar-x86_64-apple-darwin
+          cp binaries/ntp-client-sidecar-universal-apple-darwin binaries/ntp-client-sidecar-aarch64-apple-darwin
+          ls -la binaries/
           cat > tauri.macos.conf.json << 'EOF'
           {
             "bundle": {
