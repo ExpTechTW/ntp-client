@@ -30,6 +30,7 @@ High-precision Network Time Synchronization Tool
 - **Auto Sync** - Automatically synchronizes time every 60 seconds
 - **Multiple Servers** - Supports NTP servers including ExpTech, Apple, Google, Cloudflare, and more
 - **Cross-platform** - Native support for macOS, Windows, and Linux
+- **Autostart** - Support for autostart on boot
 - **Dark/Light Theme** - Switch between dark and light modes
 - **Multi-language** - Supports Traditional Chinese, English, and Japanese
 

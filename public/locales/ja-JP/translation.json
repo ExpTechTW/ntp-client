@@ -94,7 +94,8 @@
       "installFailed": "Sidecar のインストールに失敗しました"
     },
     "systemTime": "システム時刻",
-    "syncing": "同期中..."
+    "syncing": "同期中...",
+    "autostart": "自動起動"
   },
   "history": {
     "title": "履歴分析",
@@ -412,4 +413,3 @@
     "refresh": "更新"
   }
 }
-

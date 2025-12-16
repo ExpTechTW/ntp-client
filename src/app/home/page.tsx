@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, AlertTriangle, TrendingUp } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, AlertTriangle, TrendingUp, Power } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-shell'
@@ -102,6 +102,8 @@ export default function HomePage() {
   const [permissionError, setPermissionError] = useState(false)
   const [sidecarNotInstalled, setSidecarNotInstalled] = useState(false)
   const [isInstallingSidecar, setIsInstallingSidecar] = useState(false)
+  const [autostartEnabled, setAutostartEnabled] = useState(false)
+  const [isTogglingAutostart, setIsTogglingAutostart] = useState(false)
   const refs = useRef<{ time?: NodeJS.Timeout; sync?: NodeJS.Timeout; cd?: NodeJS.Timeout; syncing?: boolean }>({})
 
   const toggleTheme = () => {
@@ -188,6 +190,39 @@ export default function HomePage() {
     }
   }
 
+  const checkAutostartStatus = async () => {
+    try {
+      const res = JSON.parse(await invoke<string>('is_autostart_enabled'))
+      setAutostartEnabled(res.enabled)
+    } catch (e) {
+      console.error('檢查開機啟動狀態失敗:', e)
+    }
+  }
+
+  const toggleAutostart = async () => {
+    if (isTogglingAutostart) return
+    setIsTogglingAutostart(true)
+    try {
+      if (autostartEnabled) {
+        const res = JSON.parse(await invoke<string>('disable_autostart'))
+        if (res.success) {
+          setAutostartEnabled(false)
+        }
+      } else {
+        const res = JSON.parse(await invoke<string>('enable_autostart'))
+        if (res.success) {
+          setAutostartEnabled(true)
+        } else {
+          console.error('啟用開機啟動失敗:', res.message)
+        }
+      }
+    } catch (e) {
+      console.error('切換開機啟動失敗:', e)
+    } finally {
+      setIsTogglingAutostart(false)
+    }
+  }
+
   useEffect(() => {
     setNow(new Date())
     refs.current.time = setInterval(() => setNow(new Date()), 50)
@@ -196,6 +231,7 @@ export default function HomePage() {
     if (savedTheme) {
       setIsDark(savedTheme === 'dark')
     }
+    checkAutostartStatus()
 
     const checkSize = () => setIsCompact(window.innerHeight < 300)
     checkSize()
@@ -486,6 +522,32 @@ export default function HomePage() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{version}</span>
+            <label className="flex items-center gap-1.5 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={autostartEnabled}
+                onChange={toggleAutostart}
+                disabled={isTogglingAutostart}
+                className="sr-only"
+              />
+              <div className={`relative w-8 h-4 rounded-full transition-colors ${
+                autostartEnabled
+                  ? 'bg-blue-600'
+                  : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+              } ${isTogglingAutostart ? 'opacity-50' : ''}`}>
+                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                  autostartEnabled ? 'translate-x-4' : 'translate-x-0'
+                }`} />
+              </div>
+              <div className="flex items-center gap-1">
+                <Power className={`w-3 h-3 ${isDark ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-600'} transition-colors`} />
+                <span className={`text-[10px] transition-colors ${
+                  isDark ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-600'
+                }`}>
+                  {t('home.autostart')}
+                </span>
+              </div>
+            </label>
           </div>
           <div className="flex items-center gap-3">
             <button

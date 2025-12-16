@@ -115,6 +115,7 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .setup(|app| {
             // 初始化資料庫
             if let Err(e) = core::db::init_db() {
@@ -130,8 +131,6 @@ fn main() {
                 let _ = window.show();
                 let _ = window.set_focus();
             }
-
-            let handle = app.handle().clone();
 
             let show_i = MenuItem::with_id(app, "show", "顯示視窗", true, None::<&str>)?;
             let sync_i = MenuItem::with_id(app, "sync", "立即同步", true, None::<&str>)?;

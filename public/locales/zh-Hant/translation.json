@@ -94,7 +94,8 @@
       "installFailed": "Sidecar 安裝失敗"
     },
     "systemTime": "系統時間",
-    "syncing": "同步中..."
+    "syncing": "同步中...",
+    "autostart": "開機啟動"
   },
   "history": {
     "title": "歷史分析",

@@ -94,7 +94,8 @@
       "installFailed": "Sidecar installation failed"
     },
     "systemTime": "System Time",
-    "syncing": "Syncing..."
+    "syncing": "Syncing...",
+    "autostart": "Autostart"
   },
   "history": {
     "title": "History Analysis",
@@ -412,4 +413,3 @@
     "refresh": "Refresh"
   }
 }
-
