@@ -35,28 +35,20 @@ fn ensure_admin() {
 
             let runas_verb: Vec<u16> = "runas\0".encode_utf16().collect();
 
-            let mut sei = SHELLEXECUTEINFOW {
-                cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
-                fMask: SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS,
-                hwnd: 0,
-                lpVerb: runas_verb.as_ptr(),
-                lpFile: exe_path_wide.as_ptr(),
-                lpParameters: std::ptr::null(),
-                lpDirectory: std::ptr::null(),
-                nShow: 0,
-                hInstApp: 0,
-                lpIDList: std::ptr::null_mut(),
-                lpClass: std::ptr::null(),
-                hkeyClass: 0,
-                dwHotKey: 0,
-                hIconOrMonitor: 0,
-                hProcess: 0,
-            };
+            let mut sei: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
+            sei.cbSize = std::mem::size_of::<SHELLEXECUTEINFOW>() as u32;
+            sei.fMask = SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS;
+            sei.hwnd = std::ptr::null_mut();
+            sei.lpVerb = runas_verb.as_ptr();
+            sei.lpFile = exe_path_wide.as_ptr();
+            sei.lpParameters = std::ptr::null();
+            sei.lpDirectory = std::ptr::null();
+            sei.nShow = 0;
 
             let result = unsafe { ShellExecuteExW(&mut sei) };
 
             if result != 0 {
-                if sei.hProcess != 0 {
+                if !sei.hProcess.is_null() {
                     unsafe {
                         CloseHandle(sei.hProcess);
                     }
