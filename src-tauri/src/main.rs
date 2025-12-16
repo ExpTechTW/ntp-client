@@ -2,9 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod autostart_elevated;
-mod ntp;
-mod offset;
+mod core;
 mod sidecar;
+mod user;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -116,6 +116,13 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            // 初始化資料庫
+            if let Err(e) = core::db::init_db() {
+                eprintln!("[DB] 資料庫初始化失敗: {}", e);
+            } else {
+                println!("[DB] 資料庫初始化成功");
+            }
+
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
@@ -146,7 +153,7 @@ fn main() {
                         let handle = app.clone();
                         tauri::async_runtime::spawn(async move {
                             let server = "time.exptech.com.tw".to_string();
-                            let _ = offset::sync_ntp_time(server).await;
+                            let _ = core::offset::sync_ntp_time(server).await;
                             println!("[TRAY] 同步完成");
                             let _ = handle.emit("ntp-synced", ());
                         });
@@ -181,7 +188,7 @@ fn main() {
                 loop {
                     tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
                     let server = "time.exptech.com.tw".to_string();
-                    match offset::sync_ntp_time(server).await {
+                    match core::offset::sync_ntp_time(server).await {
                         Ok(_) => println!("[BG] 背景同步完成"),
                         Err(e) => println!("[BG] 背景同步失敗: {}", e),
                     }
@@ -198,17 +205,41 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            ntp::query_ntp_udp,
-            offset::adjust_time_by_offset,
-            offset::set_system_time_ms,
-            offset::check_time_permission,
-            offset::sync_ntp_time,
+            // Core - NTP
+            core::ntp::query_ntp_udp,
+            // Core - Offset
+            core::offset::adjust_time_by_offset,
+            core::offset::set_system_time_ms,
+            core::offset::check_time_permission,
+            core::offset::sync_ntp_time,
+            // Core - Database
+            core::db::db_init,
+            core::db::db_insert_record,
+            core::db::db_insert_batch,
+            core::db::db_query_recent,
+            core::db::db_query_range,
+            core::db::db_query_by_server,
+            core::db::db_query_outliers,
+            core::db::db_query,
+            core::db::db_get_stats,
+            core::db::db_archive,
+            core::db::db_query_archived,
+            core::db::db_delete_before,
+            core::db::db_clear,
+            core::db::db_optimize,
+            core::db::db_aggregate_hourly,
+            core::db::db_aggregate_daily,
+            // Autostart
             autostart_elevated::enable_autostart,
             autostart_elevated::disable_autostart,
             autostart_elevated::is_autostart_enabled,
+            // Sidecar
             sidecar::check_sidecar_status,
             sidecar::install_sidecar,
-            sidecar::uninstall_sidecar
+            sidecar::uninstall_sidecar,
+            // User - Stats
+            user::stats::calculate_history_stats,
+            user::stats::calculate_autocorr_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

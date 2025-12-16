@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::ntp;
+use crate::core::ntp;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetTimeResult {

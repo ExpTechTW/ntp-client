@@ -1,14 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, AlertTriangle } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, Clock, Package, GitCompare, Sun, Moon, AlertTriangle, TrendingUp } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-shell'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
 import '@/i18n'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { useHistory } from '@/contexts/HistoryContext'
 
 interface NtpResult {
   success: boolean
@@ -86,6 +88,8 @@ const Info = ({ label, value, sub, isDark }: { label: string; value: React.React
 
 export default function HomePage() {
   const { t } = useTranslation()
+  const router = useRouter()
+  const { addEntry } = useHistory()
   const [server, setServer] = useState('time.exptech.com.tw')
   const [isQuerying, setIsQuerying] = useState(false)
   const [result, setResult] = useState<NtpResult | null>(null)
@@ -117,7 +121,7 @@ export default function HomePage() {
     try {
       const res = JSON.parse(await invoke<string>('sync_ntp_time', { server: srv.trim() }))
       if (res.server) {
-        setResult({
+        const newResult = {
           success: res.success, server: res.server, server_ip: res.server_ip,
           t1: res.t1, t2: res.t2, t3: res.t3, t4: res.t4,
           offset: res.offset, delay: res.delay,
@@ -125,7 +129,21 @@ export default function HomePage() {
           poll: 0, precision: 0, root_delay: 0, root_dispersion: 0,
           ref_id: '', ref_time: 0,
           pre_sync_offset: res.pre_sync_offset, post_sync_offset: res.post_sync_offset,
+        }
+        setResult(newResult)
+        localStorage.setItem('lastNtpResult', JSON.stringify(newResult))
+        localStorage.setItem('lastNtpSyncTime', Date.now().toString())
+        addEntry({
+          offset: res.offset,
+          delay: res.delay,
+          server: srv,
         })
+        invoke('db_insert_record', {
+          offset: res.offset,
+          delay: res.delay,
+          server: srv,
+          timestamp: Date.now()
+        }).catch(err => console.error('[DB] Failed to insert record:', err))
         setPermissionError(res.code === 'PERMISSION_DENIED')
         setSidecarNotInstalled(res.code === 'SIDECAR_NOT_INSTALLED' || res.code === 'SIDECAR_NOT_RUNNING')
       } else {
@@ -189,7 +207,26 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    query(server)
+    // 檢查是否有最近的同步結果（60秒內），避免頁面切換時重複同步
+    const lastSyncTime = localStorage.getItem('lastNtpSyncTime')
+    const now = Date.now()
+    const shouldSkipInitialSync = lastSyncTime && (now - parseInt(lastSyncTime, 10)) < 60000
+
+    if (!shouldSkipInitialSync) {
+      query(server)
+    } else {
+      // 從快取載入上次結果
+      const cachedResult = localStorage.getItem('lastNtpResult')
+      if (cachedResult) {
+        try {
+          const parsed = JSON.parse(cachedResult)
+          setResult(parsed)
+          const elapsed = Math.floor((now - parseInt(lastSyncTime!, 10)) / 1000)
+          setCountdown(Math.max(0, 60 - elapsed))
+        } catch { /* ignore */ }
+      }
+    }
+
     refs.current.cd = setInterval(() => {
       setCountdown(p => {
         if (p <= 1) {
@@ -451,6 +488,15 @@ export default function HomePage() {
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{version}</span>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/history')}
+              className={`flex items-center gap-1 text-[10px] transition-colors ${
+                isDark ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-zinc-600'
+              }`}
+            >
+              <TrendingUp className="w-3 h-3" />
+              {t('home.historyLabels.viewDetails')}
+            </button>
             <button
               onClick={() => open('https://github.com/ExpTechTW/ntp-client')}
               className={`transition-colors ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-500 hover:text-zinc-700'}`}
