@@ -78,8 +78,8 @@ fn set_time_internal(
 #[cfg(target_os = "windows")]
 fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
     use chrono::{Datelike, Timelike};
-    use windows_sys::Win32::Foundation::GetLastError;
-    use windows_sys::Win32::System::SystemInformation::{SetSystemTime, SYSTEMTIME};
+    use windows_sys::Win32::Foundation::{GetLastError, SYSTEMTIME};
+    use windows_sys::Win32::System::SystemInformation::SetSystemTime;
 
     let secs = (unix_ms / 1000.0) as i64;
     let millis = (unix_ms % 1000.0) as u16;
@@ -355,17 +355,17 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
 
     let previous_time = get_current_time_ms();
 
-    // === 3 次 NTP 測量取中位數 ===
+    // === 5 次 NTP 測量取中位數 ===
     let mut offsets: Vec<f64> = Vec::new();
     let mut delays: Vec<f64> = Vec::new();
     let mut last_result: Option<ntp::NtpResult> = None;
 
-    for i in 1..=3 {
+    for i in 1..=5 {
         std::thread::sleep(std::time::Duration::from_millis(50));
         match ntp::query_ntp(&server) {
             Ok(r) => {
                 println!(
-                    "[SYNC] 測量 {}/3: offset={:.3}ms delay={:.3}ms",
+                    "[SYNC] 測量 {}/5: offset={:.3}ms delay={:.3}ms",
                     i, r.offset, r.delay
                 );
                 offsets.push(r.offset);
@@ -373,7 +373,7 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
                 last_result = Some(r);
             }
             Err(e) => {
-                println!("[SYNC] 測量 {}/3 失敗: {}", i, e.error);
+                println!("[SYNC] 測量 {}/5 失敗: {}", i, e.error);
             }
         }
     }
@@ -461,7 +461,7 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
 
     serde_json::to_string(&SyncResult {
         success: true,
-        message: format!("同步完成 (3次測量中位數)"),
+        message: format!("同步完成 (5次測量中位數)"),
         server: ntp_result.server,
         server_ip: ntp_result.server_ip,
         offset: post_sync_offset,
