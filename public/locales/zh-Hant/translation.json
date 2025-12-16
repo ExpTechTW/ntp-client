@@ -1,0 +1,26 @@
+{
+  "navigation": {
+    "home": "首頁"
+  },
+  "home": {
+    "title": "NTP Client",
+    "subtitle": "網路時間協議客戶端",
+    "description": "連接到 NTP 伺服器，查詢並同步系統時間。",
+    "serverLabel": "NTP 伺服器",
+    "query": "查詢",
+    "querying": "查詢中...",
+    "querySuccess": "查詢成功",
+    "queryFailed": "查詢失敗",
+    "popularServers": "常用伺服器"
+  },
+  "common": {
+    "loading": "載入中...",
+    "error": "錯誤",
+    "success": "成功",
+    "cancel": "取消",
+    "confirm": "確認",
+    "close": "關閉",
+    "back": "返回",
+    "refresh": "重新整理"
+  }
+}
