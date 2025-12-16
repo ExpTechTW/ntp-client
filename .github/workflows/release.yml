@@ -125,7 +125,8 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }} --config tauri.macos.conf.json
+          tauriScript: bun tauri
+          args: ${{ matrix.args }} --config src-tauri/tauri.macos.conf.json
 
       - name: Build and Release (Windows)
         if: matrix.platform == 'windows-latest'
