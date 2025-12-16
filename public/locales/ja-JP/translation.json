@@ -1,0 +1,84 @@
+{
+  "navigation": {
+    "home": "ホーム"
+  },
+  "home": {
+    "title": "NTP Client",
+    "subtitle": "ネットワーク時間プロトコルクライアント",
+    "description": "NTP サーバーに接続し、システム時刻を照会して同期します。",
+    "serverLabel": "NTP サーバー",
+    "query": "照会",
+    "querying": "照会中...",
+    "querySuccess": "照会成功",
+    "queryFailed": "照会失敗",
+    "popularServers": "人気サーバー",
+    "permissionError": "システム時刻を設定できません。管理者権限が必要です",
+    "tabs": {
+      "time": "タイムスタンプ",
+      "calc": "計算",
+      "packet": "パケット",
+      "compare": "比較"
+    },
+    "status": {
+      "excellent": "優秀",
+      "good": "良好",
+      "normal": "正常",
+      "deviation": "偏差",
+      "abnormal": "異常"
+    },
+    "stratum": {
+      "unspecified": "未指定",
+      "primary": "プライマリ参照",
+      "layer": "第{{n}}層",
+      "unsynced": "未同期",
+      "reserved": "予約済み"
+    },
+    "weekdays": {
+      "sun": "日曜日",
+      "mon": "月曜日",
+      "tue": "火曜日",
+      "wed": "水曜日",
+      "thu": "木曜日",
+      "fri": "金曜日",
+      "sat": "土曜日"
+    },
+    "week": "",
+    "timeLabels": {
+      "t1Send": "T1 送信",
+      "t2Receive": "T2 受信",
+      "t3Response": "T3 応答",
+      "t4Received": "T4 受信済み"
+    },
+    "calcLabels": {
+      "processingTime": "処理時間",
+      "preSyncOffset": "同期前誤差",
+      "postSyncOffset": "同期後誤差",
+      "correctionAmount": "補正量",
+      "networkDelay": "ネットワーク遅延"
+    },
+    "calcSubs": {
+      "preSyncMeasure": "同期前測定",
+      "postSyncVerify": "同期後検証",
+      "improvement": "改善幅"
+    },
+    "sidecar": {
+      "installRequired": "システム時刻を設定するには Sidecar Server のインストールが必要です",
+      "installing": "インストール中...",
+      "installButton": "Sidecar Server をインストール",
+      "installFailed": "Sidecar のインストールに失敗しました"
+    },
+    "systemTime": "システム時刻",
+    "syncing": "同期中..."
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "close": "閉じる",
+    "back": "戻る",
+    "refresh": "更新"
+  }
+}
+

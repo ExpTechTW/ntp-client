@@ -4,6 +4,8 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
 import zhHantTranslation from '../public/locales/zh-Hant/translation.json'
+import jaJpTranslation from '../public/locales/ja-JP/translation.json'
+import enUsTranslation from '../public/locales/en-US/translation.json'
 
 const supportedLanguages = ['zh-Hant', 'ja-JP', 'en-US']
 const defaultLanguage = 'zh-Hant'
@@ -18,6 +20,12 @@ if (!i18n.isInitialized) {
       resources: {
         'zh-Hant': {
           translation: zhHantTranslation
+        },
+        'ja-JP': {
+          translation: jaJpTranslation
+        },
+        'en-US': {
+          translation: enUsTranslation
         },
       },
       defaultNS: 'translation',

@@ -1,0 +1,84 @@
+{
+  "navigation": {
+    "home": "Home"
+  },
+  "home": {
+    "title": "NTP Client",
+    "subtitle": "Network Time Protocol Client",
+    "description": "Connect to NTP servers, query and synchronize system time.",
+    "serverLabel": "NTP Server",
+    "query": "Query",
+    "querying": "Querying...",
+    "querySuccess": "Query Success",
+    "queryFailed": "Query Failed",
+    "popularServers": "Popular Servers",
+    "permissionError": "Cannot set system time, administrator privileges required",
+    "tabs": {
+      "time": "Timestamp",
+      "calc": "Calculation",
+      "packet": "Packet",
+      "compare": "Compare"
+    },
+    "status": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "normal": "Normal",
+      "deviation": "Deviation",
+      "abnormal": "Abnormal"
+    },
+    "stratum": {
+      "unspecified": "Unspecified",
+      "primary": "Primary Reference",
+      "layer": "Layer {{n}}",
+      "unsynced": "Unsynchronized",
+      "reserved": "Reserved"
+    },
+    "weekdays": {
+      "sun": "Sunday",
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday"
+    },
+    "week": "",
+    "timeLabels": {
+      "t1Send": "T1 Send",
+      "t2Receive": "T2 Receive",
+      "t3Response": "T3 Response",
+      "t4Received": "T4 Received"
+    },
+    "calcLabels": {
+      "processingTime": "Processing Time",
+      "preSyncOffset": "Pre-Sync Offset",
+      "postSyncOffset": "Post-Sync Offset",
+      "correctionAmount": "Correction Amount",
+      "networkDelay": "Network Delay"
+    },
+    "calcSubs": {
+      "preSyncMeasure": "Pre-sync measurement",
+      "postSyncVerify": "Post-sync verification",
+      "improvement": "Improvement"
+    },
+    "sidecar": {
+      "installRequired": "Sidecar Server installation required to set system time",
+      "installing": "Installing...",
+      "installButton": "Install Sidecar Server",
+      "installFailed": "Sidecar installation failed"
+    },
+    "systemTime": "System Time",
+    "syncing": "Syncing..."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "refresh": "Refresh"
+  }
+}
+

@@ -41,13 +41,11 @@ const NTP_SERVERS = [
   { value: 'time.cloudflare.com', label: 'Cloudflare' },
 ]
 
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
-
 const TABS = [
-  { id: 'time', label: '時間戳', icon: Clock },
-  { id: 'calc', label: '計算', icon: Activity },
-  { id: 'packet', label: '封包', icon: Package },
-  { id: 'compare', label: '對比', icon: GitCompare },
+  { id: 'time', icon: Clock },
+  { id: 'calc', icon: Activity },
+  { id: 'packet', icon: Package },
+  { id: 'compare', icon: GitCompare },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -61,17 +59,22 @@ const fmtTs = (ms: number) =>
     fractionalSecondDigits: 3,
   })
 
-const getStatus = (ms: number) => {
+const getStatus = (ms: number, t: (key: string) => string) => {
   const abs = Math.abs(ms)
-  if (abs < 10) return { color: 'text-emerald-500', label: '極佳' }
-  if (abs < 50) return { color: 'text-green-500', label: '良好' }
-  if (abs < 100) return { color: 'text-yellow-500', label: '正常' }
-  if (abs < 500) return { color: 'text-orange-500', label: '偏差' }
-  return { color: 'text-red-500', label: '異常' }
+  if (abs < 10) return { color: 'text-emerald-500', label: t('home.status.excellent') }
+  if (abs < 50) return { color: 'text-green-500', label: t('home.status.good') }
+  if (abs < 100) return { color: 'text-yellow-500', label: t('home.status.normal') }
+  if (abs < 500) return { color: 'text-orange-500', label: t('home.status.deviation') }
+  return { color: 'text-red-500', label: t('home.status.abnormal') }
 }
 
-const getStratumDesc = (s: number) =>
-  s === 0 ? '未指定' : s === 1 ? '主參考' : s <= 15 ? `第${s}層` : s === 16 ? '未同步' : '保留'
+const getStratumDesc = (s: number, t: (key: string) => string) => {
+  if (s === 0) return t('home.stratum.unspecified')
+  if (s === 1) return t('home.stratum.primary')
+  if (s <= 15) return t('home.stratum.layer').replace('{{n}}', String(s))
+  if (s === 16) return t('home.stratum.unsynced')
+  return t('home.stratum.reserved')
+}
 
 const Info = ({ label, value, sub, isDark }: { label: string; value: React.ReactNode; sub?: string; isDark?: boolean }) => (
   <div className={`rounded px-1.5 py-0.5 ${isDark ? 'bg-zinc-800/40' : 'bg-zinc-200/60'}`}>
@@ -152,10 +155,10 @@ export default function HomePage() {
           query(server)
         }, 2000)
       } else {
-        console.error('Sidecar 安裝失敗:', res.message)
+        console.error(t('home.sidecar.installFailed'), res.message)
       }
     } catch (e) {
-      console.error('Sidecar 安裝失敗:', e)
+      console.error(t('home.sidecar.installFailed'), e)
       try {
         const window = getCurrentWindow()
         await window.show()
@@ -194,13 +197,23 @@ export default function HomePage() {
     }
   }, [server])
 
+  const WEEKDAYS = [
+    t('home.weekdays.sun'),
+    t('home.weekdays.mon'),
+    t('home.weekdays.tue'),
+    t('home.weekdays.wed'),
+    t('home.weekdays.thu'),
+    t('home.weekdays.fri'),
+    t('home.weekdays.sat'),
+  ]
+
   const correctedTime = result ? new Date(now.getTime() + result.offset) : now
   const hh = String(correctedTime.getHours()).padStart(2, '0')
   const mm = String(correctedTime.getMinutes()).padStart(2, '0')
   const ss = String(correctedTime.getSeconds()).padStart(2, '0')
   const ms = String(correctedTime.getMilliseconds()).padStart(3, '0')
-  const dateStr = `${correctedTime.getFullYear()}/${String(correctedTime.getMonth() + 1).padStart(2, '0')}/${String(correctedTime.getDate()).padStart(2, '0')} 星期${WEEKDAYS[correctedTime.getDay()]}`
-  const status = result ? getStatus(result.offset) : null
+  const dateStr = `${correctedTime.getFullYear()}/${String(correctedTime.getMonth() + 1).padStart(2, '0')}/${String(correctedTime.getDate()).padStart(2, '0')} ${t('home.week')}${WEEKDAYS[correctedTime.getDay()]}`
+  const status = result ? getStatus(result.offset, t) : null
 
   const sysHh = String(now.getHours()).padStart(2, '0')
   const sysMm = String(now.getMinutes()).padStart(2, '0')
@@ -276,7 +289,7 @@ export default function HomePage() {
               <span className="text-xs text-yellow-500">{t('home.permissionError')}</span>
             </div>
             <div className="flex items-center gap-1 text-yellow-500/80">
-              <span className="text-[10px]">系統時間:</span>
+              <span className="text-[10px]">{t('home.systemTime')}:</span>
               <span className="text-xs font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {sysHh}:{sysMm}:{sysSs}.{sysMs}
               </span>
@@ -287,7 +300,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center gap-2 mt-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-yellow-500/20 border border-yellow-500/50">
               <AlertTriangle className="w-4 h-4 text-yellow-500" />
-              <span className="text-xs text-yellow-500">需要安裝 Sidecar Server 才能設定系統時間</span>
+              <span className="text-xs text-yellow-500">{t('home.sidecar.installRequired')}</span>
             </div>
             <button
               onClick={installSidecar}
@@ -301,12 +314,12 @@ export default function HomePage() {
               {isInstallingSidecar ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>安裝中...</span>
+                  <span>{t('home.sidecar.installing')}</span>
                 </>
               ) : (
                 <>
                   <Package className="w-3.5 h-3.5" />
-                  <span>安裝 Sidecar Server</span>
+                  <span>{t('home.sidecar.installButton')}</span>
                 </>
               )}
             </button>
@@ -354,16 +367,16 @@ export default function HomePage() {
                   <span className={`text-[9px] ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{result.server_ip}</span>
                 </div>
                 <div className="flex flex-1">
-                  {TABS.map(t => (
+                  {TABS.map(tabItem => (
                     <button
-                      key={t.id}
-                      onClick={() => setTab(t.id)}
+                      key={tabItem.id}
+                      onClick={() => setTab(tabItem.id)}
                       className={`flex-1 flex items-center justify-center gap-0.5 py-1 text-[9px] ${
-                        tab === t.id ? 'text-blue-400 bg-blue-500/10' : isDark ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-zinc-600'
+                        tab === tabItem.id ? 'text-blue-400 bg-blue-500/10' : isDark ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-400 hover:text-zinc-600'
                       }`}
                     >
-                      <t.icon className="w-2.5 h-2.5" />
-                      <span className="hidden sm:inline">{t.label}</span>
+                      <tabItem.icon className="w-2.5 h-2.5" />
+                      <span className="hidden sm:inline">{t(`home.tabs.${tabItem.id}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -372,10 +385,10 @@ export default function HomePage() {
               <div className="p-1.5">
                 {tab === 'time' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-                    <Info label="T1 發送" value={fmtTs(result.t1)} isDark={isDark} />
-                    <Info label="T2 接收" value={fmtTs(result.t2)} isDark={isDark} />
-                    <Info label="T3 回應" value={fmtTs(result.t3)} isDark={isDark} />
-                    <Info label="T4 收到" value={fmtTs(result.t4)} isDark={isDark} />
+                    <Info label={t('home.timeLabels.t1Send')} value={fmtTs(result.t1)} isDark={isDark} />
+                    <Info label={t('home.timeLabels.t2Receive')} value={fmtTs(result.t2)} isDark={isDark} />
+                    <Info label={t('home.timeLabels.t3Response')} value={fmtTs(result.t3)} isDark={isDark} />
+                    <Info label={t('home.timeLabels.t4Received')} value={fmtTs(result.t4)} isDark={isDark} />
                   </div>
                 )}
 
@@ -384,14 +397,14 @@ export default function HomePage() {
                     <Info label="Offset" value={<span className={status?.color}>{result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}</span>} sub="((T2-T1)+(T3-T4))/2" isDark={isDark} />
                     <Info label="Delay" value={fmtS(result.delay)} sub="(T4-T1)-(T3-T2)" isDark={isDark} />
                     <Info label="RTT" value={fmtS(result.t4 - result.t1)} sub="T4-T1" isDark={isDark} />
-                    <Info label="處理時間" value={fmtS(result.t3 - result.t2)} sub="T3-T2" isDark={isDark} />
+                    <Info label={t('home.calcLabels.processingTime')} value={fmtS(result.t3 - result.t2)} sub="T3-T2" isDark={isDark} />
                   </div>
                 )}
 
                 {tab === 'packet' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                     <Info label="LI/VN/Mode" value={`0x${((result.leap << 6) | (result.version << 3) | result.mode).toString(16).padStart(2, '0')}`} sub={`LI=${result.leap} VN=${result.version} M=${result.mode}`} isDark={isDark} />
-                    <Info label="Stratum" value={result.stratum} sub={getStratumDesc(result.stratum)} isDark={isDark} />
+                    <Info label="Stratum" value={result.stratum} sub={getStratumDesc(result.stratum, t)} isDark={isDark} />
                     <Info label="Poll" value={`${result.poll}`} sub={`${Math.pow(2, result.poll)}s`} isDark={isDark} />
                     <Info label="Precision" value={`${result.precision}`} sub={`${Math.pow(2, result.precision).toExponential(1)}s`} isDark={isDark} />
                     <Info label="Root Delay" value={fmtS(result.root_delay)} isDark={isDark} />
@@ -403,10 +416,10 @@ export default function HomePage() {
 
                 {tab === 'compare' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-                    <Info label="校正前誤差" value={<span className={getStatus(result.pre_sync_offset).color}>{result.pre_sync_offset >= 0 ? '+' : ''}{fmtS(result.pre_sync_offset)}</span>} sub="同步前測量" isDark={isDark} />
-                    <Info label="校正後誤差" value={<span className={status?.color}>{result.post_sync_offset >= 0 ? '+' : ''}{fmtS(result.post_sync_offset)}</span>} sub="同步後驗證" isDark={isDark} />
-                    <Info label="校正量" value={fmtS(result.pre_sync_offset - result.post_sync_offset)} sub="改善幅度" isDark={isDark} />
-                    <Info label="Delay" value={fmtS(result.delay)} sub="網路延遲" isDark={isDark} />
+                    <Info label={t('home.calcLabels.preSyncOffset')} value={<span className={getStatus(result.pre_sync_offset, t).color}>{result.pre_sync_offset >= 0 ? '+' : ''}{fmtS(result.pre_sync_offset)}</span>} sub={t('home.calcSubs.preSyncMeasure')} isDark={isDark} />
+                    <Info label={t('home.calcLabels.postSyncOffset')} value={<span className={status?.color}>{result.post_sync_offset >= 0 ? '+' : ''}{fmtS(result.post_sync_offset)}</span>} sub={t('home.calcSubs.postSyncVerify')} isDark={isDark} />
+                    <Info label={t('home.calcLabels.correctionAmount')} value={fmtS(result.pre_sync_offset - result.post_sync_offset)} sub={t('home.calcSubs.improvement')} isDark={isDark} />
+                    <Info label="Delay" value={fmtS(result.delay)} sub={t('home.calcLabels.networkDelay')} isDark={isDark} />
                   </div>
                 )}
               </div>
@@ -419,7 +432,7 @@ export default function HomePage() {
           ) : (
             <div className={`flex items-center justify-center gap-1 py-2 ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span className="text-[10px]">同步中...</span>
+              <span className="text-[10px]">{t('home.syncing')}</span>
             </div>
           )}
         </div>

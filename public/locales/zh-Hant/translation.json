@@ -12,7 +12,63 @@
     "querySuccess": "查詢成功",
     "queryFailed": "查詢失敗",
     "popularServers": "常用伺服器",
-    "permissionError": "無法設定系統時間，需要管理員權限"
+    "permissionError": "無法設定系統時間，需要管理員權限",
+    "tabs": {
+      "time": "時間戳",
+      "calc": "計算",
+      "packet": "封包",
+      "compare": "對比"
+    },
+    "status": {
+      "excellent": "極佳",
+      "good": "良好",
+      "normal": "正常",
+      "deviation": "偏差",
+      "abnormal": "異常"
+    },
+    "stratum": {
+      "unspecified": "未指定",
+      "primary": "主參考",
+      "layer": "第{{n}}層",
+      "unsynced": "未同步",
+      "reserved": "保留"
+    },
+    "weekdays": {
+      "sun": "日",
+      "mon": "一",
+      "tue": "二",
+      "wed": "三",
+      "thu": "四",
+      "fri": "五",
+      "sat": "六"
+    },
+    "week": "星期",
+    "timeLabels": {
+      "t1Send": "T1 發送",
+      "t2Receive": "T2 接收",
+      "t3Response": "T3 回應",
+      "t4Received": "T4 收到"
+    },
+    "calcLabels": {
+      "processingTime": "處理時間",
+      "preSyncOffset": "校正前誤差",
+      "postSyncOffset": "校正後誤差",
+      "correctionAmount": "校正量",
+      "networkDelay": "網路延遲"
+    },
+    "calcSubs": {
+      "preSyncMeasure": "同步前測量",
+      "postSyncVerify": "同步後驗證",
+      "improvement": "改善幅度"
+    },
+    "sidecar": {
+      "installRequired": "需要安裝 Sidecar Server 才能設定系統時間",
+      "installing": "安裝中...",
+      "installButton": "安裝 Sidecar Server",
+      "installFailed": "Sidecar 安裝失敗"
+    },
+    "systemTime": "系統時間",
+    "syncing": "同步中..."
   },
   "common": {
     "loading": "載入中...",
