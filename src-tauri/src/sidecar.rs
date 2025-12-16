@@ -92,11 +92,12 @@ pub async fn install_sidecar() -> Result<String, String> {
     let mut sidecar_paths = Vec::new();
 
     if let Some(macos_dir) = exe_path.parent() {
+        // Tauri externalBin 會將 sidecar 放在與主執行檔相同的目錄 (Contents/MacOS/)
+        sidecar_paths.push(macos_dir.join("ntp-client-sidecar"));
         if let Some(contents_dir) = macos_dir.parent() {
             sidecar_paths.push(contents_dir.join("Resources/ntp-client-sidecar"));
             sidecar_paths.push(contents_dir.join("MacOS/ntp-client-sidecar"));
         }
-        sidecar_paths.push(macos_dir.join("ntp-client-sidecar"));
     }
 
     if let Ok(current_dir) = std::env::current_dir() {
