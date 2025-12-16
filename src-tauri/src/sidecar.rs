@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_os = "macos")]
@@ -14,11 +15,13 @@ const LAUNCHDAEMON_LABEL: &str = "com.exptech.ntp-client-sidecar";
 #[cfg(target_os = "macos")]
 const LAUNCHDAEMON_PATH: &str = "/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist";
 
+#[cfg(target_os = "macos")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetTimeRequest {
     pub unix_ms: f64,
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetTimeResponse {
     pub success: bool,
