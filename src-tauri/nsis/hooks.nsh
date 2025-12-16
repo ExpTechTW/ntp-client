@@ -1,4 +1,4 @@
 !macro NSIS_HOOK_PREINSTALL
-  nsExec::Exec 'taskkill /F /IM "ntp-client.exe"'
-  Sleep 500
+  nsis_tauri_utils::KillProcessCurrentUser "ntp-client.exe"
+  Pop $R0
 !macroend
