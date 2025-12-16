@@ -13,7 +13,6 @@ const TASK_NAME: &str = "NTPClientAutoStart";
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 const LAUNCHDAEMON_LABEL: &str = "com.exptech.ntp-client";
 
-/// 啟用開機自啟動（以特權執行）
 #[tauri::command]
 pub async fn enable_autostart() -> Result<String, String> {
     #[cfg(target_os = "windows")]
@@ -37,7 +36,6 @@ pub async fn enable_autostart() -> Result<String, String> {
     }
 }
 
-/// 停用開機自啟動
 #[tauri::command]
 pub async fn disable_autostart() -> Result<String, String> {
     #[cfg(target_os = "windows")]
@@ -61,7 +59,6 @@ pub async fn disable_autostart() -> Result<String, String> {
     }
 }
 
-/// 檢查是否已啟用開機自啟動
 #[tauri::command]
 pub async fn is_autostart_enabled() -> Result<String, String> {
     #[cfg(target_os = "windows")]
@@ -89,16 +86,12 @@ pub async fn is_autostart_enabled() -> Result<String, String> {
     }
 }
 
-// ============ Windows 實作 ============
-
 #[cfg(target_os = "windows")]
 fn enable_autostart_windows() -> Result<String, String> {
     let exe_path = std::env::current_exe()
         .map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
     let exe_path_str = exe_path.to_string_lossy();
 
-    // 使用 PowerShell 以管理員權限執行 schtasks
-    // Task Scheduler 可以以 HIGHEST 權限執行，無需每次 UAC 提示
     let ps_script = format!(
         r#"
         $taskName = '{}'
@@ -120,7 +113,6 @@ fn enable_autostart_windows() -> Result<String, String> {
         TASK_NAME, exe_path_str
     );
 
-    // 使用 PowerShell -Verb RunAs 來請求管理員權限
     let output = Command::new("powershell")
         .args([
             "-NoProfile",
@@ -161,7 +153,6 @@ fn disable_autostart_windows() -> Result<String, String> {
         })
         .to_string())
     } else {
-        // 如果任務不存在也算成功
         Ok(serde_json::json!({
             "success": true,
             "message": "開機自啟動已停用"
@@ -186,10 +177,6 @@ fn is_autostart_enabled_windows() -> Result<String, String> {
     .to_string())
 }
 
-// ============ macOS 實作 ============
-// 使用 LaunchDaemon（系統級別）以 root 執行應用程式
-// 這樣應用程式啟動時就有權限設定系統時間，不需要每次都輸入密碼
-
 #[cfg(target_os = "macos")]
 fn get_launchdaemon_path() -> String {
     format!("/Library/LaunchDaemons/{}.plist", LAUNCHDAEMON_LABEL)
@@ -200,13 +187,10 @@ fn enable_autostart_macos() -> Result<String, String> {
     let exe_path = std::env::current_exe()
         .map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
 
-    // 取得實際執行檔路徑（在 .app/Contents/MacOS/ 內）
     let exe_path_str = exe_path.to_string_lossy().to_string();
 
     let plist_path = get_launchdaemon_path();
 
-    // 建立 LaunchDaemon plist 內容
-    // 以 root 執行
     let plist_content = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -231,8 +215,6 @@ fn enable_autostart_macos() -> Result<String, String> {
         LAUNCHDAEMON_LABEL, exe_path_str
     );
 
-    // 使用 osascript 請求管理員權限來寫入 /Library/LaunchDaemons/
-    // 先將內容寫入臨時檔案，再用 sudo 移動到目標位置
     let temp_path = "/tmp/com.exptech.ntp-client.plist.tmp";
     std::fs::write(temp_path, &plist_content)
         .map_err(|e| format!("無法寫入臨時檔案: {}", e))?;
@@ -267,7 +249,6 @@ fn enable_autostart_macos() -> Result<String, String> {
 fn disable_autostart_macos() -> Result<String, String> {
     let plist_path = get_launchdaemon_path();
 
-    // 使用 osascript 請求管理員權限來移除檔案
     let script = format!(
         r#"do shell script "launchctl unload -w '{}' 2>/dev/null; rm -f '{}'" with administrator privileges"#,
         plist_path, plist_path
@@ -289,7 +270,6 @@ fn disable_autostart_macos() -> Result<String, String> {
         if stderr.contains("User canceled") || stderr.contains("-128") {
             Err("使用者取消授權".to_string())
         } else {
-            // 如果檔案不存在也算成功
             Ok(serde_json::json!({
                 "success": true,
                 "message": "開機自啟動已停用"
@@ -311,8 +291,6 @@ fn is_autostart_enabled_macos() -> Result<String, String> {
     .to_string())
 }
 
-// ============ Linux 實作 ============
-
 #[cfg(target_os = "linux")]
 fn get_systemd_service_path() -> String {
     format!(
@@ -330,7 +308,6 @@ fn enable_autostart_linux() -> Result<String, String> {
     let service_name = LAUNCHDAEMON_LABEL.replace(".", "-");
     let service_path = get_systemd_service_path();
 
-    // 建立 systemd service 內容
     let service_content = format!(
         r#"[Unit]
 Description=NTP Client Time Sync
@@ -348,7 +325,6 @@ WantedBy=multi-user.target
         exe_path_str
     );
 
-    // 使用 pkexec 請求管理員權限
     let script = format!(
         "echo '{}' > '{}' && systemctl daemon-reload && systemctl enable {}",
         service_content, service_path, service_name

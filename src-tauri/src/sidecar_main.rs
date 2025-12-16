@@ -1,6 +1,3 @@
-// Sidecar server 主程序入口點
-// 此程序以 root 權限運行，監聽 UDP 端口並處理時間設定請求
-
 use serde::{Deserialize, Serialize};
 use std::net::UdpSocket;
 
@@ -56,7 +53,6 @@ fn handle_set_time_request(request: SetTimeRequest) -> SetTimeResponse {
 
 #[cfg(target_os = "macos")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 檢查是否以 root 運行
     if unsafe { libc::geteuid() } != 0 {
         eprintln!("錯誤: sidecar server 必須以 root 權限運行");
         std::process::exit(1);

@@ -104,7 +104,6 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
         wMilliseconds: millis,
     };
 
-    // 先嘗試直接設定（如果已有管理員權限）
     let result = unsafe { SetSystemTime(&system_time) };
 
     if result != 0 {
@@ -122,9 +121,7 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
 
     let error_code = unsafe { GetLastError() };
 
-    // 錯誤碼 5 = 權限不足，嘗試用 PowerShell 提權
     if error_code == 5 {
-        // 使用 PowerShell 以管理員權限設定時間
         let ps_script = format!(
             r#"Set-Date -Date (Get-Date -Year {} -Month {} -Day {} -Hour {} -Minute {} -Second {} -Millisecond {})"#,
             system_time.wYear,
@@ -184,14 +181,12 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
 
 #[cfg(target_os = "macos")]
 fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
-    // 先檢查 sidecar 二進制文件是否存在
     let sidecar_binary_exists =
         std::path::Path::new("/usr/local/bin/ntp-client-sidecar").exists();
     let sidecar_plist_exists =
         std::path::Path::new("/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist")
             .exists();
 
-    // 如果 sidecar 未安裝，返回特殊錯誤碼讓前端處理
     if !sidecar_binary_exists || !sidecar_plist_exists {
         return Err(SetTimeError {
             success: false,
@@ -200,7 +195,6 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
         });
     }
 
-    // 嘗試通過 sidecar server 設定時間
     match crate::sidecar::set_time_via_sidecar(unix_ms) {
         Ok(msg) => Ok(msg),
         Err(e) => {
@@ -222,11 +216,9 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
 
 #[cfg(target_os = "linux")]
 fn set_time_linux(_unix_ms: f64) -> Result<String, SetTimeError> {
-    // 檢查是否以 root 執行 (euid == 0)
     let is_root = unsafe { libc::geteuid() } == 0;
 
     if !is_root {
-        // 非 root 執行，直接返回權限錯誤，不彈出密碼框
         return Err(SetTimeError {
             success: false,
             error: "需要管理員權限才能設定系統時間".to_string(),
@@ -245,7 +237,6 @@ fn set_time_linux(_unix_ms: f64) -> Result<String, SetTimeError> {
 
     let date_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
 
-    // 以 root 執行，直接使用 timedatectl 或 date
     if let Ok(output) = Command::new("timedatectl")
         .args(["set-time", &date_str])
         .output()
@@ -396,7 +387,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
 
     let previous_time = get_current_time_ms();
 
-    // === 5 次 NTP 測量取中位數 ===
     let mut offsets: Vec<f64> = Vec::new();
     let mut delays: Vec<f64> = Vec::new();
     let mut last_result: Option<ntp::NtpResult> = None;
@@ -428,7 +418,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         .map_err(|e| e.to_string());
     }
 
-    // 取中位數
     offsets.sort_by(|a, b| a.partial_cmp(b).unwrap());
     delays.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let median_offset = offsets[offsets.len() / 2];
@@ -440,7 +429,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         median_offset, median_delay, offsets.len()
     );
 
-    // === 精準同步：等到整秒時設定時間 ===
     fn do_sync(target_ms: f64, wait_until_local: f64) -> Result<(), SetTimeError> {
         let wait_ms = wait_until_local - get_current_time_ms();
 
@@ -461,7 +449,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         Ok(())
     }
 
-    // 計算目標時間
     let now_local = get_current_time_ms();
     let correct_time_now = now_local + median_offset;
     let next_second = ((correct_time_now / 1000.0).floor() + 1.0) * 1000.0;
@@ -473,14 +460,12 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         wait_until_local - now_local
     );
 
-    // 嘗試同步，記錄是否有權限錯誤
     let mut sync_error = do_sync(next_second, wait_until_local).err();
     let permission_denied = sync_error
         .as_ref()
         .map(|e| e.code == "PERMISSION_DENIED")
         .unwrap_or(false);
     
-    // 不再自動安裝 sidecar，只記錄錯誤讓前端處理
     let sidecar_not_installed = sync_error
         .as_ref()
         .map(|e| e.code == "SIDECAR_NOT_INSTALLED" || e.code == "SIDECAR_NOT_RUNNING")
@@ -494,7 +479,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         println!("[SYNC] 同步失敗: {}", e.error);
     }
 
-    // 驗證結果（如果同步成功才驗證）
     let new_time = get_current_time_ms();
     let post_sync_offset = if sync_error.is_none() {
         std::thread::sleep(std::time::Duration::from_millis(100));
@@ -506,7 +490,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
             Err(_) => 0.0,
         }
     } else {
-        // 同步失敗，使用原始測量的偏差
         median_offset
     };
 
@@ -517,8 +500,6 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         );
     }
 
-    // 無論同步是否成功，都返回測量數據
-    // 但如果是權限錯誤，標記 code 讓前端顯示警告
     serde_json::to_string(&SyncResult {
         success: sync_error.is_none(),
         message: if sync_error.is_none() {

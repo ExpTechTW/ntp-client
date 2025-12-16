@@ -26,15 +26,12 @@ pub struct SetTimeResponse {
     pub error: Option<String>,
 }
 
-/// 檢查 sidecar 是否已安裝並運行
 #[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn check_sidecar_status() -> Result<String, String> {
     let installed = std::path::Path::new(SIDECAR_INSTALL_PATH).exists()
         && std::path::Path::new(LAUNCHDAEMON_PATH).exists();
 
-    // 直接測試 UDP 連接來確認服務是否運行
-    // 注意：launchctl list 需要 root 權限才能查看 system domain
     let running = test_sidecar_connection();
 
     Ok(serde_json::json!({
@@ -51,10 +48,8 @@ pub async fn check_sidecar_status() -> Result<String, String> {
     .to_string())
 }
 
-/// 測試 sidecar UDP 連接是否可用
 #[cfg(target_os = "macos")]
 fn test_sidecar_connection() -> bool {
-    // 發送一個測試請求並等待回應
     let socket = match UdpSocket::bind("127.0.0.1:0") {
         Ok(s) => s,
         Err(_) => return false,
@@ -67,7 +62,6 @@ fn test_sidecar_connection() -> bool {
         return false;
     }
 
-    // 使用當前時間作為測試值（這樣即使被設定也不會造成問題）
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as f64)
@@ -84,25 +78,18 @@ fn test_sidecar_connection() -> bool {
         return false;
     }
 
-    // 嘗試接收回應
     let mut buffer = [0u8; 256];
     socket.recv_from(&mut buffer).is_ok()
 }
 
-/// 安裝 sidecar server（使用 AppleScript 請求 sudo 權限）
-/// 會自動清理舊的安裝並重新安裝
 #[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn install_sidecar() -> Result<String, String> {
     let exe_path =
         std::env::current_exe().map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
 
-    // 尋找 sidecar 二進制文件
     let mut sidecar_paths = Vec::new();
 
-    // 生產模式：在 .app bundle 中
-    // 結構：MyApp.app/Contents/MacOS/myapp
-    //       MyApp.app/Contents/Resources/ntp-client-sidecar
     if let Some(macos_dir) = exe_path.parent() {
         if let Some(contents_dir) = macos_dir.parent() {
             sidecar_paths.push(contents_dir.join("Resources/ntp-client-sidecar"));
@@ -111,7 +98,6 @@ pub async fn install_sidecar() -> Result<String, String> {
         sidecar_paths.push(macos_dir.join("ntp-client-sidecar"));
     }
 
-    // 開發模式：在 target/debug 或 target/release 目錄中
     if let Ok(current_dir) = std::env::current_dir() {
         sidecar_paths.push(current_dir.join("target/debug/ntp-client-sidecar"));
         sidecar_paths.push(current_dir.join("target/release/ntp-client-sidecar"));
@@ -135,12 +121,10 @@ pub async fn install_sidecar() -> Result<String, String> {
         sidecar_source.to_string_lossy()
     );
 
-    // 先將 sidecar 複製到臨時目錄（避免 root 權限無法存取用戶目錄的問題）
     let temp_sidecar = "/tmp/ntp-client-sidecar-install";
     std::fs::copy(&sidecar_source, temp_sidecar)
         .map_err(|e| format!("無法複製 sidecar 到臨時目錄: {}", e))?;
 
-    // 建立安裝腳本（自動清理舊安裝並重新安裝）
     let install_script = format!(
         r#"
 set -e
@@ -217,12 +201,10 @@ fi
         label = LAUNCHDAEMON_LABEL
     );
 
-    // 將腳本寫入臨時文件
     let temp_script = "/tmp/install-sidecar.sh";
     std::fs::write(temp_script, install_script)
         .map_err(|e| format!("無法寫入臨時腳本: {}", e))?;
 
-    // 使用 osascript 請求管理員權限執行安裝腳本
     let script = format!(
         r#"do shell script "bash '{}'" with administrator privileges"#,
         temp_script
@@ -233,7 +215,6 @@ fi
         .output()
         .map_err(|e| format!("執行失敗: {}", e))?;
 
-    // 清理臨時腳本
     let _ = std::fs::remove_file(temp_script);
 
     if !output.status.success() {
@@ -245,13 +226,10 @@ fi
         }
     }
 
-    // 安裝腳本執行成功，進行 UDP 連接測試驗證
     println!("[SIDECAR] 安裝腳本執行完成，正在驗證服務...");
 
-    // 等待一下讓服務完全啟動
     std::thread::sleep(std::time::Duration::from_millis(500));
 
-    // 測試 UDP 連接
     let mut test_passed = false;
     for attempt in 1..=3 {
         if test_sidecar_connection() {
@@ -274,7 +252,6 @@ fi
         })
         .to_string())
     } else {
-        // 安裝成功但驗證失敗
         Ok(serde_json::json!({
             "success": true,
             "message": "Sidecar 已安裝，但無法驗證服務狀態。請檢查 /tmp/ntp-client-sidecar.err",
@@ -284,7 +261,6 @@ fi
     }
 }
 
-/// 卸載 sidecar server
 #[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn uninstall_sidecar() -> Result<String, String> {
@@ -292,13 +268,11 @@ pub async fn uninstall_sidecar() -> Result<String, String> {
         r#"
 set -e
 
-# 卸載 LaunchDaemon（使用新版 bootout 語法，相容舊版 unload）
 launchctl bootout system '{plist}' 2>/dev/null || \
 launchctl unload -w '{plist}' 2>/dev/null || true
 
 rm -f '{plist}'
 
-# 刪除 sidecar 二進制文件
 rm -f '{bin}'
 
 echo "卸載完成"
@@ -339,7 +313,6 @@ echo "卸載完成"
     }
 }
 
-/// 通過 UDP 與 sidecar 通信設定時間
 #[cfg(target_os = "macos")]
 pub fn set_time_via_sidecar(unix_ms: f64) -> Result<String, String> {
     let request = SetTimeRequest { unix_ms };
@@ -376,7 +349,6 @@ pub fn set_time_via_sidecar(unix_ms: f64) -> Result<String, String> {
     }
 }
 
-// 非 macOS 平台的空實現
 #[cfg(not(target_os = "macos"))]
 #[tauri::command]
 pub async fn check_sidecar_status() -> Result<String, String> {
