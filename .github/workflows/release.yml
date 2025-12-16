@@ -73,27 +73,27 @@ jobs:
       - name: Build sidecar (macOS)
         if: matrix.platform == 'macos-latest'
         run: |
-          cd src-tauri
-          # Build for both architectures
-          cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
-          cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
+          cd src-tauri/sidecar
+          # Build for both architectures from separate crate
+          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
 
-          # Create resources directory
-          mkdir -p resources
+          # Create resources directory in parent
+          mkdir -p ../resources
 
           # Create universal binary using lipo
           lipo -create \
             target/x86_64-apple-darwin/release/ntp-client-sidecar \
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
-            -output resources/ntp-client-sidecar
+            -output ../resources/ntp-client-sidecar
 
           # Ad-hoc sign the universal binary
-          codesign --force --sign - --timestamp=none resources/ntp-client-sidecar || true
+          codesign --force --sign - --timestamp=none ../resources/ntp-client-sidecar || true
 
           # Verify
           echo "=== Sidecar binary ==="
-          ls -la resources/
-          file resources/ntp-client-sidecar
+          ls -la ../resources/
+          file ../resources/ntp-client-sidecar
 
       - name: Patch tauri.conf.json for macOS sidecar
         if: matrix.platform == 'macos-latest'

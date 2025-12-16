@@ -102,10 +102,11 @@ pub async fn install_sidecar() -> Result<String, String> {
     }
 
     if let Ok(current_dir) = std::env::current_dir() {
-        sidecar_paths.push(current_dir.join("target/debug/ntp-client-sidecar"));
-        sidecar_paths.push(current_dir.join("target/release/ntp-client-sidecar"));
-        sidecar_paths.push(current_dir.join("src-tauri/target/debug/ntp-client-sidecar"));
-        sidecar_paths.push(current_dir.join("src-tauri/target/release/ntp-client-sidecar"));
+        // Sidecar is in separate crate: src-tauri/sidecar/
+        sidecar_paths.push(current_dir.join("sidecar/target/debug/ntp-client-sidecar"));
+        sidecar_paths.push(current_dir.join("sidecar/target/release/ntp-client-sidecar"));
+        sidecar_paths.push(current_dir.join("src-tauri/sidecar/target/debug/ntp-client-sidecar"));
+        sidecar_paths.push(current_dir.join("src-tauri/sidecar/target/release/ntp-client-sidecar"));
     }
 
     let sidecar_source = sidecar_paths.iter().find(|p| p.exists()).ok_or_else(|| {

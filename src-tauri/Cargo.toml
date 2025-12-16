@@ -30,12 +30,3 @@ tauri-plugin-autostart = "2.5.1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Time", "Win32_Security", "Win32_UI_Shell", "Win32_System_Registry", "Win32_System_Threading"] }
-
-# Sidecar server binary (macOS only)
-[[bin]]
-name = "ntp-client-sidecar"
-path = "src/sidecar_main.rs"
-required-features = []
-
-[target.'cfg(target_os = "macos")'.dependencies]
-# UDP socket is already available via std::net::UdpSocket

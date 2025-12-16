@@ -64,7 +64,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("[SIDECAR] 啟動 sidecar server，監聽端口 {}", SIDECAR_PORT);
 
-    // 綁定 UDP socket
     let socket = UdpSocket::bind(format!("127.0.0.1:{}", SIDECAR_PORT))?;
     println!("[SIDECAR] 已綁定到 127.0.0.1:{}", SIDECAR_PORT);
 
