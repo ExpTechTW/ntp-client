@@ -185,27 +185,13 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
 #[cfg(target_os = "macos")]
 fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
     // 先檢查 sidecar 二進制文件是否存在
-    let sidecar_binary_exists = std::path::Path::new("/usr/local/bin/ntp-client-sidecar").exists();
-    let sidecar_plist_exists = std::path::Path::new("/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist").exists();
-    
-    // 檢查 LaunchDaemon 是否運行（需要 root 權限才能查看系統級 LaunchDaemon）
-    let sidecar_running = std::process::Command::new("launchctl")
-        .args(["list", "com.exptech.ntp-client-sidecar"])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    
-    // 嘗試連接 UDP 端口來確認服務是否真的可用
-    let udp_available = if sidecar_running {
-        use std::net::UdpSocket;
-        UdpSocket::bind("127.0.0.1:0")
-            .and_then(|socket| socket.connect("127.0.0.1:12345"))
-            .is_ok()
-    } else {
-        false
-    };
+    let sidecar_binary_exists =
+        std::path::Path::new("/usr/local/bin/ntp-client-sidecar").exists();
+    let sidecar_plist_exists =
+        std::path::Path::new("/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist")
+            .exists();
 
-    // 如果 sidecar 未安裝或未運行，返回特殊錯誤碼讓前端處理
+    // 如果 sidecar 未安裝，返回特殊錯誤碼讓前端處理
     if !sidecar_binary_exists || !sidecar_plist_exists {
         return Err(SetTimeError {
             success: false,
@@ -213,24 +199,21 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
             code: "SIDECAR_NOT_INSTALLED".to_string(),
         });
     }
-    
-    if !udp_available {
-        return Err(SetTimeError {
-            success: false,
-            error: "Sidecar server 未運行或無法連接，請檢查服務狀態".to_string(),
-            code: "SIDECAR_NOT_RUNNING".to_string(),
-        });
-    }
 
     // 嘗試通過 sidecar server 設定時間
     match crate::sidecar::set_time_via_sidecar(unix_ms) {
         Ok(msg) => Ok(msg),
         Err(e) => {
-            // 如果 sidecar 連接失敗，返回錯誤
+            // 如果 sidecar 連接失敗，可能是服務未運行
+            let code = if e.contains("無法接收回應") || e.contains("無法發送請求") {
+                "SIDECAR_NOT_RUNNING"
+            } else {
+                "SIDECAR_ERROR"
+            };
             Err(SetTimeError {
                 success: false,
-                error: format!("無法通過 sidecar 設定時間: {}", e),
-                code: "SIDECAR_ERROR".to_string(),
+                error: format!("Sidecar server 連接失敗: {}", e),
+                code: code.to_string(),
             })
         }
     }

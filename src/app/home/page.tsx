@@ -5,6 +5,7 @@ import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Globe, Activity, 
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-shell'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useTranslation } from 'react-i18next'
 import '@/i18n'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -168,6 +169,12 @@ export default function HomePage() {
     setIsInstallingSidecar(true)
     try {
       const res = JSON.parse(await invoke<string>('install_sidecar'))
+
+      // 安裝完成後，恢復視窗焦點（因為 osascript 會導致視窗失焦）
+      const window = getCurrentWindow()
+      await window.show()
+      await window.setFocus()
+
       if (res.success) {
         setSidecarNotInstalled(false)
         // 安裝成功後，等待一下然後重新同步
@@ -179,6 +186,12 @@ export default function HomePage() {
       }
     } catch (e) {
       console.error('Sidecar 安裝失敗:', e)
+      // 即使失敗也嘗試恢復視窗焦點
+      try {
+        const window = getCurrentWindow()
+        await window.show()
+        await window.setFocus()
+      } catch {}
     } finally {
       setIsInstallingSidecar(false)
     }

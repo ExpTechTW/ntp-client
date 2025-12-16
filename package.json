@@ -9,7 +9,9 @@
     "build": "next build",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:sign": "bash scripts/sign-sidecar.sh",
+    "tauri:release": "tauri build && bash scripts/sign-sidecar.sh"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",

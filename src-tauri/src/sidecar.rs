@@ -1,30 +1,17 @@
 use serde::{Deserialize, Serialize};
-use std::net::UdpSocket;
 use std::process::Command;
 
 #[cfg(target_os = "macos")]
-const SIDECAR_PORT: u16 = 12345;
+use std::net::UdpSocket;
+
 #[cfg(target_os = "macos")]
-const SIDECAR_BINARY_NAME: &str = "ntp-client-sidecar";
+const SIDECAR_PORT: u16 = 12345;
 #[cfg(target_os = "macos")]
 const SIDECAR_INSTALL_PATH: &str = "/usr/local/bin/ntp-client-sidecar";
 #[cfg(target_os = "macos")]
 const LAUNCHDAEMON_LABEL: &str = "com.exptech.ntp-client-sidecar";
 #[cfg(target_os = "macos")]
 const LAUNCHDAEMON_PATH: &str = "/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist";
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SidecarStatus {
-    pub installed: bool,
-    pub running: bool,
-    pub message: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SidecarResult {
-    pub success: bool,
-    pub message: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetTimeRequest {
@@ -46,28 +33,14 @@ pub async fn check_sidecar_status() -> Result<String, String> {
     let installed = std::path::Path::new(SIDECAR_INSTALL_PATH).exists()
         && std::path::Path::new(LAUNCHDAEMON_PATH).exists();
 
-    // 檢查 LaunchDaemon 是否已載入
-    let running = Command::new("launchctl")
-        .args(["list", LAUNCHDAEMON_LABEL])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
-    // 嘗試連接 UDP 端口來確認服務是否真的在運行
-    let udp_available = if running {
-        UdpSocket::bind("127.0.0.1:0")
-            .and_then(|socket| {
-                socket.connect(format!("127.0.0.1:{}", SIDECAR_PORT))
-            })
-            .is_ok()
-    } else {
-        false
-    };
+    // 直接測試 UDP 連接來確認服務是否運行
+    // 注意：launchctl list 需要 root 權限才能查看 system domain
+    let running = test_sidecar_connection();
 
     Ok(serde_json::json!({
         "installed": installed,
-        "running": running && udp_available,
-        "message": if installed && running && udp_available {
+        "running": running,
+        "message": if installed && running {
             "Sidecar 已安裝並運行中"
         } else if installed {
             "Sidecar 已安裝但未運行"
@@ -78,73 +51,124 @@ pub async fn check_sidecar_status() -> Result<String, String> {
     .to_string())
 }
 
+/// 測試 sidecar UDP 連接是否可用
+#[cfg(target_os = "macos")]
+fn test_sidecar_connection() -> bool {
+    // 發送一個測試請求並等待回應
+    let socket = match UdpSocket::bind("127.0.0.1:0") {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+
+    if socket
+        .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+        .is_err()
+    {
+        return false;
+    }
+
+    // 使用當前時間作為測試值（這樣即使被設定也不會造成問題）
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as f64)
+        .unwrap_or(0.0);
+
+    let test_request = format!(r#"{{"unix_ms":{}}}"#, now_ms);
+    if socket
+        .send_to(
+            test_request.as_bytes(),
+            format!("127.0.0.1:{}", SIDECAR_PORT),
+        )
+        .is_err()
+    {
+        return false;
+    }
+
+    // 嘗試接收回應
+    let mut buffer = [0u8; 256];
+    socket.recv_from(&mut buffer).is_ok()
+}
+
 /// 安裝 sidecar server（使用 AppleScript 請求 sudo 權限）
+/// 會自動清理舊的安裝並重新安裝
 #[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn install_sidecar() -> Result<String, String> {
-    let exe_path = std::env::current_exe()
-        .map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
+    let exe_path =
+        std::env::current_exe().map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
 
     // 尋找 sidecar 二進制文件
-    // 1. 先檢查開發模式下的構建目錄
     let mut sidecar_paths = Vec::new();
-    
+
+    // 生產模式：在 .app bundle 中
+    // 結構：MyApp.app/Contents/MacOS/myapp
+    //       MyApp.app/Contents/Resources/ntp-client-sidecar
+    if let Some(macos_dir) = exe_path.parent() {
+        if let Some(contents_dir) = macos_dir.parent() {
+            sidecar_paths.push(contents_dir.join("Resources/ntp-client-sidecar"));
+            sidecar_paths.push(contents_dir.join("MacOS/ntp-client-sidecar"));
+        }
+        sidecar_paths.push(macos_dir.join("ntp-client-sidecar"));
+    }
+
     // 開發模式：在 target/debug 或 target/release 目錄中
     if let Ok(current_dir) = std::env::current_dir() {
         sidecar_paths.push(current_dir.join("target/debug/ntp-client-sidecar"));
         sidecar_paths.push(current_dir.join("target/release/ntp-client-sidecar"));
-    }
-    
-    // 生產模式：在 .app bundle 中
-    if let Some(app_path) = exe_path
-        .parent()
-        .and_then(|p| p.parent())
-        .and_then(|p| p.parent())
-        .and_then(|p| p.parent())
-    {
-        sidecar_paths.push(app_path.join("Contents/Resources/ntp-client-sidecar"));
-        sidecar_paths.push(app_path.join("Contents/MacOS/ntp-client-sidecar"));
-        sidecar_paths.push(app_path.join("ntp-client-sidecar"));
-    }
-    
-    // 也檢查執行文件所在目錄
-    if let Some(exe_dir) = exe_path.parent() {
-        sidecar_paths.push(exe_dir.join("ntp-client-sidecar"));
+        sidecar_paths.push(current_dir.join("src-tauri/target/debug/ntp-client-sidecar"));
+        sidecar_paths.push(current_dir.join("src-tauri/target/release/ntp-client-sidecar"));
     }
 
-    let sidecar_source = sidecar_paths
-        .iter()
-        .find(|p| p.exists())
-        .ok_or_else(|| {
-            format!(
-                "找不到 sidecar 二進制文件。已檢查的路徑: {}",
-                sidecar_paths
-                    .iter()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        })?;
+    let sidecar_source = sidecar_paths.iter().find(|p| p.exists()).ok_or_else(|| {
+        format!(
+            "找不到 sidecar 二進制文件。已檢查的路徑:\n{}",
+            sidecar_paths
+                .iter()
+                .map(|p| format!("  - {}", p.to_string_lossy()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    })?;
 
-    // 建立臨時腳本文件來安裝 sidecar
+    println!(
+        "[SIDECAR] 找到 sidecar 二進制文件: {}",
+        sidecar_source.to_string_lossy()
+    );
+
+    // 先將 sidecar 複製到臨時目錄（避免 root 權限無法存取用戶目錄的問題）
+    let temp_sidecar = "/tmp/ntp-client-sidecar-install";
+    std::fs::copy(&sidecar_source, temp_sidecar)
+        .map_err(|e| format!("無法複製 sidecar 到臨時目錄: {}", e))?;
+
+    // 建立安裝腳本（自動清理舊安裝並重新安裝）
     let install_script = format!(
         r#"
-# 複製 sidecar 二進制文件
-cp '{}' '{}'
-chmod 755 '{}'
-chown root:wheel '{}'
+set -e
+
+# 先卸載並清理舊的安裝（如果存在）
+launchctl unload -w '{plist}' 2>/dev/null || true
+rm -f '{plist}' 2>/dev/null || true
+rm -f '{bin}' 2>/dev/null || true
+
+# 複製新的 sidecar 二進制文件
+cp '{temp}' '{bin}'
+chmod 755 '{bin}'
+chown root:wheel '{bin}'
+
+# 清理臨時文件
+rm -f '{temp}' 2>/dev/null || true
 
 # 建立 LaunchDaemon plist
-cat > '{}' << 'EOF'
+cat > '{plist}' << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>{}</string>
+    <string>{label}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{}</string>
+        <string>{bin}</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -158,29 +182,39 @@ cat > '{}' << 'EOF'
 </plist>
 EOF
 
-chmod 644 '{}'
-chown root:wheel '{}'
+chmod 644 '{plist}'
+chown root:wheel '{plist}'
 
-# 先卸載舊的（如果存在）
-launchctl unload '{}' 2>/dev/null || true
+# 載入 LaunchDaemon（使用新版 bootstrap 語法，相容舊版 load）
+# 先嘗試 bootout 移除舊的（如果存在）
+launchctl bootout system '{plist}' 2>/dev/null || true
 
-# 載入 LaunchDaemon（需要 root 權限）
-launchctl load -w '{}'
+# 使用 bootstrap 載入到 system domain
+if launchctl bootstrap system '{plist}' 2>/dev/null; then
+    echo "使用 bootstrap 載入成功"
+elif launchctl load -w '{plist}' 2>/dev/null; then
+    echo "使用 load 載入成功"
+else
+    echo "LaunchDaemon 載入失敗" >&2
+    exit 1
+fi
 
-# 等待一下確保服務啟動
-sleep 1
+# 等待服務啟動
+sleep 2
+
+# 驗證安裝（使用 print 檢查 system domain）
+if launchctl print system/{label} >/dev/null 2>&1; then
+    echo "安裝成功"
+elif launchctl list '{label}' >/dev/null 2>&1; then
+    echo "安裝成功"
+else
+    echo "警告: 服務可能未正常啟動，請檢查 /tmp/ntp-client-sidecar.err" >&2
+fi
 "#,
-        sidecar_source.to_string_lossy(),      // 1: cp source
-        SIDECAR_INSTALL_PATH,                   // 2: cp dest
-        SIDECAR_INSTALL_PATH,                   // 3: chmod
-        SIDECAR_INSTALL_PATH,                   // 4: chown
-        LAUNCHDAEMON_PATH,                      // 5: cat > plist
-        LAUNCHDAEMON_LABEL,                     // 6: Label string
-        SIDECAR_INSTALL_PATH,                   // 7: ProgramArguments string
-        LAUNCHDAEMON_PATH,                      // 8: chmod plist
-        LAUNCHDAEMON_PATH,                      // 9: chown plist
-        LAUNCHDAEMON_PATH,                      // 10: launchctl unload
-        LAUNCHDAEMON_PATH                       // 11: launchctl load
+        temp = temp_sidecar,
+        bin = SIDECAR_INSTALL_PATH,
+        plist = LAUNCHDAEMON_PATH,
+        label = LAUNCHDAEMON_LABEL
     );
 
     // 將腳本寫入臨時文件
@@ -199,22 +233,54 @@ sleep 1
         .output()
         .map_err(|e| format!("執行失敗: {}", e))?;
 
-    // 清理臨時文件
+    // 清理臨時腳本
     let _ = std::fs::remove_file(temp_script);
 
-    if output.status.success() {
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("User canceled") || stderr.contains("-128") {
+            return Err("使用者取消授權".to_string());
+        } else {
+            return Err(format!("安裝失敗: {}", stderr));
+        }
+    }
+
+    // 安裝腳本執行成功，進行 UDP 連接測試驗證
+    println!("[SIDECAR] 安裝腳本執行完成，正在驗證服務...");
+
+    // 等待一下讓服務完全啟動
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // 測試 UDP 連接
+    let mut test_passed = false;
+    for attempt in 1..=3 {
+        if test_sidecar_connection() {
+            test_passed = true;
+            println!("[SIDECAR] UDP 連接測試成功 (嘗試 {}/3)", attempt);
+            break;
+        }
+        println!(
+            "[SIDECAR] UDP 連接測試失敗，重試中... (嘗試 {}/3)",
+            attempt
+        );
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+
+    if test_passed {
         Ok(serde_json::json!({
             "success": true,
-            "message": "Sidecar 已成功安裝並啟動"
+            "message": "Sidecar 已成功安裝並驗證運行正常",
+            "verified": true
         })
         .to_string())
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        if stderr.contains("User canceled") || stderr.contains("-128") {
-            Err("使用者取消授權".to_string())
-        } else {
-            Err(format!("安裝失敗: {}", stderr))
-        }
+        // 安裝成功但驗證失敗
+        Ok(serde_json::json!({
+            "success": true,
+            "message": "Sidecar 已安裝，但無法驗證服務狀態。請檢查 /tmp/ntp-client-sidecar.err",
+            "verified": false
+        })
+        .to_string())
     }
 }
 
@@ -224,18 +290,25 @@ sleep 1
 pub async fn uninstall_sidecar() -> Result<String, String> {
     let uninstall_script = format!(
         r#"
-# 卸載 LaunchDaemon
-launchctl unload -w '{}' 2>/dev/null || true
-rm -f '{}'
+set -e
+
+# 卸載 LaunchDaemon（使用新版 bootout 語法，相容舊版 unload）
+launchctl bootout system '{plist}' 2>/dev/null || \
+launchctl unload -w '{plist}' 2>/dev/null || true
+
+rm -f '{plist}'
 
 # 刪除 sidecar 二進制文件
-rm -f '{}'
+rm -f '{bin}'
+
+echo "卸載完成"
 "#,
-        LAUNCHDAEMON_PATH, LAUNCHDAEMON_PATH, SIDECAR_INSTALL_PATH
+        plist = LAUNCHDAEMON_PATH,
+        bin = SIDECAR_INSTALL_PATH
     );
 
     let temp_script = "/tmp/uninstall-sidecar.sh";
-    std::fs::write(temp_script, uninstall_script)
+    std::fs::write(temp_script, &uninstall_script)
         .map_err(|e| format!("無法寫入臨時腳本: {}", e))?;
 
     let script = format!(
@@ -269,125 +342,37 @@ rm -f '{}'
 /// 通過 UDP 與 sidecar 通信設定時間
 #[cfg(target_os = "macos")]
 pub fn set_time_via_sidecar(unix_ms: f64) -> Result<String, String> {
-    // 序列化請求
     let request = SetTimeRequest { unix_ms };
-    let request_json = serde_json::to_string(&request)
-        .map_err(|e| format!("序列化失敗: {}", e))?;
+    let request_json =
+        serde_json::to_string(&request).map_err(|e| format!("序列化失敗: {}", e))?;
 
-    // 創建 UDP socket
-    let socket = UdpSocket::bind("127.0.0.1:0")
-        .map_err(|e| format!("無法綁定 UDP socket: {}", e))?;
+    let socket =
+        UdpSocket::bind("127.0.0.1:0").map_err(|e| format!("無法綁定 UDP socket: {}", e))?;
 
     socket
         .set_read_timeout(Some(std::time::Duration::from_secs(2)))
         .map_err(|e| format!("無法設定超時: {}", e))?;
 
-    // 發送請求
     socket
-        .send_to(request_json.as_bytes(), format!("127.0.0.1:{}", SIDECAR_PORT))
+        .send_to(
+            request_json.as_bytes(),
+            format!("127.0.0.1:{}", SIDECAR_PORT),
+        )
         .map_err(|e| format!("無法發送請求: {}", e))?;
 
-    // 接收回應
     let mut buffer = [0u8; 1024];
     let (size, _) = socket
         .recv_from(&mut buffer)
         .map_err(|e| format!("無法接收回應: {}", e))?;
 
     let response_json = String::from_utf8_lossy(&buffer[..size]);
-    let response: SetTimeResponse = serde_json::from_str(&response_json)
-        .map_err(|e| format!("解析回應失敗: {}", e))?;
+    let response: SetTimeResponse =
+        serde_json::from_str(&response_json).map_err(|e| format!("解析回應失敗: {}", e))?;
 
     if response.success {
         Ok(response.message)
     } else {
-        Err(response.error.unwrap_or_else(|| response.message))
-    }
-}
-
-/// Sidecar server 主程序（以 root 運行）
-#[cfg(target_os = "macos")]
-pub fn run_sidecar_server() -> Result<(), Box<dyn std::error::Error>> {
-    // 檢查是否以 root 運行
-    if unsafe { libc::geteuid() } != 0 {
-        eprintln!("錯誤: sidecar server 必須以 root 權限運行");
-        std::process::exit(1);
-    }
-
-    println!("[SIDECAR] 啟動 sidecar server，監聽端口 {}", SIDECAR_PORT);
-
-    // 綁定 UDP socket
-    let socket = UdpSocket::bind(format!("127.0.0.1:{}", SIDECAR_PORT))?;
-    println!("[SIDECAR] 已綁定到 127.0.0.1:{}", SIDECAR_PORT);
-
-    let mut buffer = [0u8; 1024];
-
-    loop {
-        match socket.recv_from(&mut buffer) {
-            Ok((size, addr)) => {
-                let request_json = String::from_utf8_lossy(&buffer[..size]);
-                println!("[SIDECAR] 收到來自 {} 的請求: {}", addr, request_json);
-
-                match serde_json::from_str::<SetTimeRequest>(&request_json) {
-                    Ok(request) => {
-                        let response = handle_set_time_request(request);
-                        let response_json = serde_json::to_string(&response)
-                            .unwrap_or_else(|_| r#"{"success":false,"message":"序列化失敗"}"#.to_string());
-
-                        if let Err(e) = socket.send_to(response_json.as_bytes(), addr) {
-                            eprintln!("[SIDECAR] 發送回應失敗: {}", e);
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("[SIDECAR] 解析請求失敗: {}", e);
-                        let error_response = SetTimeResponse {
-                            success: false,
-                            message: "無效的請求格式".to_string(),
-                            error: Some(e.to_string()),
-                        };
-                        let response_json = serde_json::to_string(&error_response)
-                            .unwrap_or_else(|_| r#"{"success":false,"message":"序列化失敗"}"#.to_string());
-                        let _ = socket.send_to(response_json.as_bytes(), addr);
-                    }
-                }
-            }
-            Err(e) => {
-                eprintln!("[SIDECAR] 接收數據失敗: {}", e);
-            }
-        }
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn handle_set_time_request(request: SetTimeRequest) -> SetTimeResponse {
-    let secs = (request.unix_ms / 1000.0).floor() as i64;
-    let usecs = ((request.unix_ms % 1000.0) * 1000.0) as i64;
-
-    let tv = libc::timeval {
-        tv_sec: secs,
-        tv_usec: usecs as i32,
-    };
-
-    let result = unsafe { libc::settimeofday(&tv, std::ptr::null()) };
-
-    if result == 0 {
-        let datetime = chrono::DateTime::from_timestamp(secs, (usecs * 1000) as u32)
-            .unwrap_or_else(|| chrono::DateTime::from_timestamp(secs, 0).unwrap());
-        SetTimeResponse {
-            success: true,
-            message: format!(
-                "System time set (UTC): {}.{:03}",
-                datetime.format("%Y-%m-%d %H:%M:%S"),
-                (usecs / 1000)
-            ),
-            error: None,
-        }
-    } else {
-        let errno = std::io::Error::last_os_error();
-        SetTimeResponse {
-            success: false,
-            message: format!("settimeofday failed: {}", errno),
-            error: Some(errno.to_string()),
-        }
+        Err(response.error.unwrap_or(response.message))
     }
 }
 
@@ -414,4 +399,3 @@ pub async fn install_sidecar() -> Result<String, String> {
 pub async fn uninstall_sidecar() -> Result<String, String> {
     Err("此功能僅支援 macOS".to_string())
 }
-
