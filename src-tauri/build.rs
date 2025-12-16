@@ -1,7 +1,4 @@
 fn main() {
-    // Windows: embed manifest with Common Controls v6 dependency for Tauri dialog APIs
-    // Note: We use asInvoker here because the app will request admin privileges
-    // via Task Scheduler for elevated autostart, not via UAC on every launch
     #[cfg(target_os = "windows")]
     {
         let mut windows = tauri_build::WindowsAttributes::new();

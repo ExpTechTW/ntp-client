@@ -1,14 +1,18 @@
+#[cfg(target_os = "macos")]
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "macos")]
 use std::net::UdpSocket;
 
 #[cfg(target_os = "macos")]
 const SIDECAR_PORT: u16 = 12345;
 
+#[cfg(target_os = "macos")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SetTimeRequest {
     unix_ms: f64,
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SetTimeResponse {
     success: bool,

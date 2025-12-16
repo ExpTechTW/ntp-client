@@ -92,7 +92,6 @@ export default function HomePage() {
   const [isCompact, setIsCompact] = useState(false)
   const [version, setVersion] = useState('')
   const [isDark, setIsDark] = useState(true)
-  // const [autostart, setAutostart] = useState(false) // 開機自啟動功能暫時停用
   const [permissionError, setPermissionError] = useState(false)
   const [sidecarNotInstalled, setSidecarNotInstalled] = useState(false)
   const [isInstallingSidecar, setIsInstallingSidecar] = useState(false)
@@ -104,31 +103,6 @@ export default function HomePage() {
     localStorage.setItem('theme', newTheme ? 'dark' : 'light')
   }
 
-  /* 開機自啟動功能暫時停用
-  const toggleAutostart = async () => {
-    try {
-      if (autostart) {
-        await invoke('disable_autostart')
-        setAutostart(false)
-      } else {
-        await invoke('enable_autostart')
-        setAutostart(true)
-      }
-    } catch (e) {
-      console.error('Autostart toggle failed:', e)
-    }
-  }
-
-  const checkAutostart = async () => {
-    try {
-      const res = JSON.parse(await invoke<string>('is_autostart_enabled'))
-      setAutostart(res.enabled)
-    } catch {
-      setAutostart(false)
-    }
-  }
-  */
-
   const query = async (srv: string) => {
     if (!srv.trim() || isQuerying || refs.current.syncing) return
     refs.current.syncing = true
@@ -139,7 +113,6 @@ export default function HomePage() {
 
     try {
       const res = JSON.parse(await invoke<string>('sync_ntp_time', { server: srv.trim() }))
-      // 無論同步是否成功，只要有測量數據就顯示
       if (res.server) {
         setResult({
           success: res.success, server: res.server, server_ip: res.server_ip,
@@ -150,7 +123,6 @@ export default function HomePage() {
           ref_id: '', ref_time: 0,
           pre_sync_offset: res.pre_sync_offset, post_sync_offset: res.post_sync_offset,
         })
-        // 檢查是否為權限錯誤或 sidecar 未安裝
         setPermissionError(res.code === 'PERMISSION_DENIED')
         setSidecarNotInstalled(res.code === 'SIDECAR_NOT_INSTALLED' || res.code === 'SIDECAR_NOT_RUNNING')
       } else {
@@ -170,14 +142,12 @@ export default function HomePage() {
     try {
       const res = JSON.parse(await invoke<string>('install_sidecar'))
 
-      // 安裝完成後，恢復視窗焦點（因為 osascript 會導致視窗失焦）
       const window = getCurrentWindow()
       await window.show()
       await window.setFocus()
 
       if (res.success) {
         setSidecarNotInstalled(false)
-        // 安裝成功後，等待一下然後重新同步
         setTimeout(() => {
           query(server)
         }, 2000)
@@ -186,7 +156,6 @@ export default function HomePage() {
       }
     } catch (e) {
       console.error('Sidecar 安裝失敗:', e)
-      // 即使失敗也嘗試恢復視窗焦點
       try {
         const window = getCurrentWindow()
         await window.show()
@@ -201,9 +170,6 @@ export default function HomePage() {
     setNow(new Date())
     refs.current.time = setInterval(() => setNow(new Date()), 50)
     getVersion().then(v => setVersion(`v${v}`)).catch(() => {})
-    // checkAutostart() // 開機自啟動功能暫時停用
-
-    // 讀取主題設定
     const savedTheme = localStorage.getItem('theme')
     if (savedTheme) {
       setIsDark(savedTheme === 'dark')
@@ -228,7 +194,6 @@ export default function HomePage() {
     }
   }, [server])
 
-  // 計算校正後的正確時間（系統時間 + offset）
   const correctedTime = result ? new Date(now.getTime() + result.offset) : now
   const hh = String(correctedTime.getHours()).padStart(2, '0')
   const mm = String(correctedTime.getMinutes()).padStart(2, '0')
@@ -237,7 +202,6 @@ export default function HomePage() {
   const dateStr = `${correctedTime.getFullYear()}/${String(correctedTime.getMonth() + 1).padStart(2, '0')}/${String(correctedTime.getDate()).padStart(2, '0')} 星期${WEEKDAYS[correctedTime.getDay()]}`
   const status = result ? getStatus(result.offset) : null
 
-  // 系統時間（用於無法校正時顯示）
   const sysHh = String(now.getHours()).padStart(2, '0')
   const sysMm = String(now.getMinutes()).padStart(2, '0')
   const sysSs = String(now.getSeconds()).padStart(2, '0')
@@ -463,13 +427,6 @@ export default function HomePage() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <span className={`text-[10px] font-mono ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>{version}</span>
-            {/* 開機自啟動功能暫時停用
-            <button onClick={toggleAutostart} className={`flex items-center gap-1.5 text-[10px] transition-colors ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-500 hover:text-zinc-700'}`}>
-              <Power className={`w-3 h-3 ${autostart ? 'text-emerald-400' : ''}`} />
-              <span>開機啟動</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${autostart ? 'bg-emerald-400' : isDark ? 'bg-zinc-600' : 'bg-zinc-400'}`} />
-            </button>
-            */}
           </div>
           <div className="flex items-center gap-3">
             <button

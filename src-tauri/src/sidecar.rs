@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 
 #[cfg(target_os = "macos")]
 use std::net::UdpSocket;
+#[cfg(target_os = "macos")]
+use std::process::Command;
 
 #[cfg(target_os = "macos")]
 const SIDECAR_PORT: u16 = 12345;

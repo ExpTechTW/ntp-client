@@ -460,7 +460,7 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         wait_until_local - now_local
     );
 
-    let mut sync_error = do_sync(next_second, wait_until_local).err();
+    let sync_error = do_sync(next_second, wait_until_local).err();
     let permission_denied = sync_error
         .as_ref()
         .map(|e| e.code == "PERMISSION_DENIED")
