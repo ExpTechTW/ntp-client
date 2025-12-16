@@ -14,11 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            args: "--target universal-apple-darwin"
-          - platform: "windows-latest"
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+          - platform: windows-latest
             args: ""
-          - platform: "ubuntu-22.04"
+          - platform: ubuntu-22.04
             args: ""
 
     runs-on: ${{ matrix.platform }}
@@ -31,16 +31,14 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Install dependencies (macOS)
+      - name: Install Rust targets (macOS)
         if: matrix.platform == 'macos-latest'
-        run: |
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: "./src-tauri -> target"
-          # Include platform-specific cache key
+          workspaces: ./src-tauri -> target
           key: ${{ matrix.platform }}-${{ matrix.args }}
 
       - name: Setup Bun
@@ -55,8 +53,7 @@ jobs:
             ~/.bun/install/cache
             node_modules
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+          restore-keys: ${{ runner.os }}-bun-
 
       - name: Install frontend dependencies
         run: bun install
@@ -73,29 +70,19 @@ jobs:
           p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
-      - name: Build sidecar for universal binary (macOS)
+      - name: Build sidecar (macOS)
         if: matrix.platform == 'macos-latest'
         run: |
           cd src-tauri
-          # 構建 x86_64 版本
           cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
-          # 構建 aarch64 版本
           cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
-          # 創建 universal-apple-darwin 目錄結構（Tauri universal build 會在這裡找）
           mkdir -p target/universal-apple-darwin/release
-          # 創建 universal binary（直接放在 Tauri 期望的位置）
           lipo -create \
             target/x86_64-apple-darwin/release/ntp-client-sidecar \
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
             -output target/universal-apple-darwin/release/ntp-client-sidecar
-          # 簽名 sidecar
           codesign --force --sign - --timestamp=none --options runtime target/universal-apple-darwin/release/ntp-client-sidecar || true
-          # 驗證
-          echo "=== Sidecar binary created ==="
           ls -la target/universal-apple-darwin/release/ntp-client-sidecar
-          file target/universal-apple-darwin/release/ntp-client-sidecar
-          # 創建 macOS 專用配置文件
-          # externalBin 路徑格式：Tauri 會自動在 target/{target-triple}/release/ 目錄尋找
           cat > tauri.macos.conf.json << 'EOF'
           {
             "bundle": {
@@ -103,8 +90,6 @@ jobs:
             }
           }
           EOF
-          echo "=== tauri.macos.conf.json ==="
-          cat tauri.macos.conf.json
 
       - name: Build and Release (macOS)
         if: matrix.platform == 'macos-latest'
@@ -142,6 +127,7 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          tauriScript: bun tauri
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -164,3 +150,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: --bundles appimage
+          tauriScript: bun tauri
