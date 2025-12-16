@@ -4,6 +4,7 @@
 mod autostart_elevated;
 mod ntp;
 mod offset;
+mod sidecar;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -15,10 +16,14 @@ use tauri_plugin_updater::UpdaterExt;
 /// Windows: 檢查是否以管理員權限執行，如果不是則重新啟動並請求 UAC
 #[cfg(target_os = "windows")]
 fn ensure_admin() {
-    use std::process::Command;
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Diagnostics::Debug::GetLastError;
+    use windows_sys::Win32::UI::Shell::{ShellExecuteExW, SHELLEXECUTEINFOW, SEE_MASK_FLAG_NO_UI, SEE_MASK_NOCLOSEPROCESS};
 
     // 檢查是否已經是管理員
-    let is_admin = Command::new("net")
+    let is_admin = std::process::Command::new("net")
         .args(["session"])
         .output()
         .map(|o| o.status.success())
@@ -27,24 +32,52 @@ fn ensure_admin() {
     if !is_admin {
         // 取得當前執行檔路徑
         if let Ok(exe_path) = std::env::current_exe() {
-            let exe_str = exe_path.to_string_lossy();
+            // 將路徑轉換為寬字串（UTF-16），確保以 null 結尾
+            let exe_path_wide: Vec<u16> = OsStr::new(exe_path.as_os_str())
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
 
-            // 使用 PowerShell 以管理員權限重新啟動
-            let _ = Command::new("powershell")
-                .args([
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    &format!(
-                        "Start-Process '{}' -Verb RunAs",
-                        exe_str.replace("'", "''")
-                    ),
-                ])
-                .spawn();
+            // "runas" 動詞的寬字串（UTF-16），確保以 null 結尾
+            let runas_verb: Vec<u16> = "runas\0".encode_utf16().collect();
 
-            // 退出當前非管理員實例
-            std::process::exit(0);
+            // 準備 ShellExecuteEx 結構
+            let mut sei = SHELLEXECUTEINFOW {
+                cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
+                fMask: SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS,
+                hwnd: 0,
+                lpVerb: runas_verb.as_ptr(),
+                lpFile: exe_path_wide.as_ptr(),
+                lpParameters: std::ptr::null(),
+                lpDirectory: std::ptr::null(),
+                nShow: 0, // SW_HIDE - 隱藏窗口
+                hInstApp: 0,
+                lpIDList: std::ptr::null_mut(),
+                lpClass: std::ptr::null(),
+                hkeyClass: 0,
+                dwHotKey: 0,
+                hIconOrMonitor: 0,
+                hProcess: 0,
+            };
+
+            // 執行 ShellExecuteEx（需要保持 runas_verb 和 exe_path_wide 在作用域內）
+            let result = unsafe { ShellExecuteExW(&mut sei) };
+
+            if result != 0 {
+                // 成功啟動提升權限的實例
+                // 關閉進程句柄（如果有的話）
+                if sei.hProcess != 0 {
+                    unsafe {
+                        CloseHandle(sei.hProcess);
+                    }
+                }
+                // 退出當前非管理員實例
+                std::process::exit(0);
+            } else {
+                // 如果用戶取消 UAC 提示，記錄錯誤但不退出
+                let error = unsafe { GetLastError() };
+                eprintln!("無法以管理員權限啟動: 錯誤碼 {}", error);
+            }
         }
     }
 }
@@ -181,7 +214,10 @@ fn main() {
             offset::sync_ntp_time,
             autostart_elevated::enable_autostart,
             autostart_elevated::disable_autostart,
-            autostart_elevated::is_autostart_enabled
+            autostart_elevated::is_autostart_enabled,
+            sidecar::check_sidecar_status,
+            sidecar::install_sidecar,
+            sidecar::uninstall_sidecar
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

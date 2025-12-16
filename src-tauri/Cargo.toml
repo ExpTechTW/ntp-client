@@ -5,6 +5,7 @@ description = "NTP 時間同步客戶端"
 authors = ["whes1015"]
 edition = "2021"
 license = "AGPL-3.0"
+default-run = "ntp-client"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -28,4 +29,13 @@ tauri-plugin-opener = "2"
 tauri-plugin-autostart = "2.5.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Time", "Win32_Security"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Time", "Win32_Security", "Win32_UI_Shell", "Win32_System_Diagnostics_Debug"] }
+
+# Sidecar server binary (macOS only)
+[[bin]]
+name = "ntp-client-sidecar"
+path = "src/sidecar_main.rs"
+required-features = []
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# UDP socket is already available via std::net::UdpSocket

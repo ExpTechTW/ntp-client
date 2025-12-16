@@ -184,44 +184,55 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
 
 #[cfg(target_os = "macos")]
 fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
-    let secs = (unix_ms / 1000.0).floor() as i64;
-    let usecs = ((unix_ms % 1000.0) * 1000.0) as i64;
+    // 先檢查 sidecar 二進制文件是否存在
+    let sidecar_binary_exists = std::path::Path::new("/usr/local/bin/ntp-client-sidecar").exists();
+    let sidecar_plist_exists = std::path::Path::new("/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist").exists();
+    
+    // 檢查 LaunchDaemon 是否運行（需要 root 權限才能查看系統級 LaunchDaemon）
+    let sidecar_running = std::process::Command::new("launchctl")
+        .args(["list", "com.exptech.ntp-client-sidecar"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    
+    // 嘗試連接 UDP 端口來確認服務是否真的可用
+    let udp_available = if sidecar_running {
+        use std::net::UdpSocket;
+        UdpSocket::bind("127.0.0.1:0")
+            .and_then(|socket| socket.connect("127.0.0.1:12345"))
+            .is_ok()
+    } else {
+        false
+    };
 
-    // 檢查是否以 root 執行 (euid == 0)
-    let is_root = unsafe { libc::geteuid() } == 0;
-
-    if !is_root {
-        // 非 root 執行，直接返回權限錯誤，不彈出密碼框
+    // 如果 sidecar 未安裝或未運行，返回特殊錯誤碼讓前端處理
+    if !sidecar_binary_exists || !sidecar_plist_exists {
         return Err(SetTimeError {
             success: false,
-            error: "需要管理員權限才能設定系統時間".to_string(),
-            code: "PERMISSION_DENIED".to_string(),
+            error: "Sidecar server 未安裝，需要管理員權限進行安裝".to_string(),
+            code: "SIDECAR_NOT_INSTALLED".to_string(),
+        });
+    }
+    
+    if !udp_available {
+        return Err(SetTimeError {
+            success: false,
+            error: "Sidecar server 未運行或無法連接，請檢查服務狀態".to_string(),
+            code: "SIDECAR_NOT_RUNNING".to_string(),
         });
     }
 
-    // 以 root 執行，直接使用 settimeofday
-    let tv = libc::timeval {
-        tv_sec: secs,
-        tv_usec: usecs as i32,
-    };
-
-    let result = unsafe { libc::settimeofday(&tv, std::ptr::null()) };
-
-    if result == 0 {
-        let datetime = chrono::DateTime::from_timestamp(secs, (usecs * 1000) as u32)
-            .unwrap_or_else(|| chrono::DateTime::from_timestamp(secs, 0).unwrap());
-        Ok(format!(
-            "System time set (UTC): {}.{:03}",
-            datetime.format("%Y-%m-%d %H:%M:%S"),
-            (usecs / 1000)
-        ))
-    } else {
-        let errno = std::io::Error::last_os_error();
-        Err(SetTimeError {
-            success: false,
-            error: format!("settimeofday failed: {}", errno),
-            code: "SET_TIME_ERROR".to_string(),
-        })
+    // 嘗試通過 sidecar server 設定時間
+    match crate::sidecar::set_time_via_sidecar(unix_ms) {
+        Ok(msg) => Ok(msg),
+        Err(e) => {
+            // 如果 sidecar 連接失敗，返回錯誤
+            Err(SetTimeError {
+                success: false,
+                error: format!("無法通過 sidecar 設定時間: {}", e),
+                code: "SIDECAR_ERROR".to_string(),
+            })
+        }
     }
 }
 
@@ -480,11 +491,21 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
     );
 
     // 嘗試同步，記錄是否有權限錯誤
-    let sync_error = do_sync(next_second, wait_until_local).err();
+    let mut sync_error = do_sync(next_second, wait_until_local).err();
     let permission_denied = sync_error
         .as_ref()
         .map(|e| e.code == "PERMISSION_DENIED")
         .unwrap_or(false);
+    
+    // 不再自動安裝 sidecar，只記錄錯誤讓前端處理
+    let sidecar_not_installed = sync_error
+        .as_ref()
+        .map(|e| e.code == "SIDECAR_NOT_INSTALLED" || e.code == "SIDECAR_NOT_RUNNING")
+        .unwrap_or(false);
+    
+    if sidecar_not_installed {
+        println!("[SYNC] Sidecar 未安裝或未運行，請手動安裝");
+    }
 
     if let Some(ref e) = sync_error {
         println!("[SYNC] 同步失敗: {}", e.error);
@@ -536,6 +557,8 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         post_sync_offset,
         code: if permission_denied {
             Some("PERMISSION_DENIED".to_string())
+        } else if sidecar_not_installed {
+            Some("SIDECAR_NOT_INSTALLED".to_string())
         } else {
             None
         },

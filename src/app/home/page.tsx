@@ -93,6 +93,8 @@ export default function HomePage() {
   const [isDark, setIsDark] = useState(true)
   // const [autostart, setAutostart] = useState(false) // 開機自啟動功能暫時停用
   const [permissionError, setPermissionError] = useState(false)
+  const [sidecarNotInstalled, setSidecarNotInstalled] = useState(false)
+  const [isInstallingSidecar, setIsInstallingSidecar] = useState(false)
   const refs = useRef<{ time?: NodeJS.Timeout; sync?: NodeJS.Timeout; cd?: NodeJS.Timeout; syncing?: boolean }>({})
 
   const toggleTheme = () => {
@@ -132,6 +134,7 @@ export default function HomePage() {
     setIsQuerying(true)
     setCountdown(60)
     setPermissionError(false)
+    setSidecarNotInstalled(false)
 
     try {
       const res = JSON.parse(await invoke<string>('sync_ntp_time', { server: srv.trim() }))
@@ -146,8 +149,9 @@ export default function HomePage() {
           ref_id: '', ref_time: 0,
           pre_sync_offset: res.pre_sync_offset, post_sync_offset: res.post_sync_offset,
         })
-        // 檢查是否為權限錯誤
+        // 檢查是否為權限錯誤或 sidecar 未安裝
         setPermissionError(res.code === 'PERMISSION_DENIED')
+        setSidecarNotInstalled(res.code === 'SIDECAR_NOT_INSTALLED' || res.code === 'SIDECAR_NOT_RUNNING')
       } else {
         setResult(null)
       }
@@ -156,6 +160,27 @@ export default function HomePage() {
     } finally {
       setIsQuerying(false)
       refs.current.syncing = false
+    }
+  }
+
+  const installSidecar = async () => {
+    if (isInstallingSidecar) return
+    setIsInstallingSidecar(true)
+    try {
+      const res = JSON.parse(await invoke<string>('install_sidecar'))
+      if (res.success) {
+        setSidecarNotInstalled(false)
+        // 安裝成功後，等待一下然後重新同步
+        setTimeout(() => {
+          query(server)
+        }, 2000)
+      } else {
+        console.error('Sidecar 安裝失敗:', res.message)
+      }
+    } catch (e) {
+      console.error('Sidecar 安裝失敗:', e)
+    } finally {
+      setIsInstallingSidecar(false)
     }
   }
 
@@ -279,6 +304,35 @@ export default function HomePage() {
                 {sysHh}:{sysMm}:{sysSs}.{sysMs}
               </span>
             </div>
+          </div>
+        )}
+        {sidecarNotInstalled && (
+          <div className="flex flex-col items-center gap-2 mt-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-yellow-500/20 border border-yellow-500/50">
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+              <span className="text-xs text-yellow-500">需要安裝 Sidecar Server 才能設定系統時間</span>
+            </div>
+            <button
+              onClick={installSidecar}
+              disabled={isInstallingSidecar}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white transition-colors ${
+                isInstallingSidecar
+                  ? 'bg-zinc-600 cursor-not-allowed'
+                  : 'bg-yellow-500 hover:bg-yellow-600'
+              }`}
+            >
+              {isInstallingSidecar ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>安裝中...</span>
+                </>
+              ) : (
+                <>
+                  <Package className="w-3.5 h-3.5" />
+                  <span>安裝 Sidecar Server</span>
+                </>
+              )}
+            </button>
           </div>
         )}
       </div>
