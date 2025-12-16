@@ -152,7 +152,7 @@ export default function HomePage() {
   const mm = String(now.getMinutes()).padStart(2, '0')
   const ss = String(now.getSeconds()).padStart(2, '0')
   const ms = String(now.getMilliseconds()).padStart(3, '0')
-  const date = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} 週${WEEKDAYS[now.getDay()]}`
+  const weekday = `週${WEEKDAYS[now.getDay()]}`
   const status = result ? getStatus(result.offset) : null
 
   const Digit = ({ children, className = '' }: { children: string; className?: string }) => (
@@ -179,7 +179,7 @@ export default function HomePage() {
             <Digit className="text-base text-zinc-500 w-[1ch]">{ms[1]}</Digit>
             <Digit className="text-base text-zinc-500 w-[1ch]">{ms[2]}</Digit>
           </div>
-          <p className="text-[9px] text-zinc-600 mt-0.5" suppressHydrationWarning>{date}</p>
+          <p className="text-xs text-zinc-500 mt-1" suppressHydrationWarning>{weekday}</p>
           {status && (
             <p className={`text-[9px] font-mono ${status.color}`}>
               {result!.offset >= 0 ? '+' : ''}{fmtS(result!.offset)}
@@ -195,8 +195,7 @@ export default function HomePage() {
       <div className="absolute top-1.5 right-1.5 z-20"><LanguageSwitcher /></div>
 
       <div className="flex-1 flex flex-col items-center justify-center min-h-0 py-2">
-        <p className="text-[10px] text-zinc-600" suppressHydrationWarning>{date}</p>
-        <div className="flex items-baseline justify-center mt-1 font-mono">
+        <div className="flex items-baseline justify-center font-mono">
           <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{hh[0]}</Digit>
           <Digit className="text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch]">{hh[1]}</Digit>
           <span className="text-6xl sm:text-7xl md:text-8xl font-bold">:</span>
@@ -210,8 +209,9 @@ export default function HomePage() {
           <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[1]}</Digit>
           <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[2]}</Digit>
         </div>
+        <p className="text-sm text-zinc-500 mt-1" suppressHydrationWarning>{weekday}</p>
         {result?.success && status && (
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-1">
             <span className={`text-xs ${status.color}`}>{status.label}</span>
             <span className={`text-sm font-mono ${status.color}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
               {result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}
