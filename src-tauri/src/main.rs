@@ -104,6 +104,23 @@ fn main() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
+            let app_data_dir = app.path().app_data_dir().ok();
+            let is_first_launch = app_data_dir
+                .as_ref()
+                .map(|dir| !dir.join(".launched").exists())
+                .unwrap_or(true);
+
+            if is_first_launch {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+                if let Some(dir) = app_data_dir {
+                    let _ = std::fs::create_dir_all(&dir);
+                    let _ = std::fs::write(dir.join(".launched"), "1");
+                }
+            }
+
             let handle = app.handle().clone();
 
             let show_i = MenuItem::with_id(app, "show", "顯示視窗", true, None::<&str>)?;
@@ -128,7 +145,6 @@ fn main() {
                             let server = "time.exptech.com.tw".to_string();
                             let _ = offset::sync_ntp_time(server).await;
                             println!("[TRAY] 同步完成");
-                            // 通知前端更新
                             let _ = handle.emit("ntp-synced", ());
                         });
                     }
