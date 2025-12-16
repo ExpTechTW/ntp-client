@@ -96,18 +96,21 @@ jobs:
           codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-universal-apple-darwin || true
 
           # Verify all files exist
-          echo "=== Sidecar binaries ==="
+          echo "=== Sidecar binaries in src-tauri/binaries ==="
           ls -la binaries/
           file binaries/*
+          echo "=== Full paths ==="
+          ls -la $(pwd)/binaries/
 
-          # Create macOS-specific config
-          cat > tauri.macos.conf.json << 'EOF'
-          {
-            "bundle": {
-              "externalBin": ["binaries/ntp-client-sidecar"]
-            }
-          }
-          EOF
+      - name: Patch tauri.conf.json for macOS sidecar
+        if: matrix.platform == 'macos-latest'
+        run: |
+          cd src-tauri
+          # Use jq to add externalBin to tauri.conf.json
+          jq '.bundle.externalBin = ["binaries/ntp-client-sidecar"]' tauri.conf.json > tauri.conf.json.tmp
+          mv tauri.conf.json.tmp tauri.conf.json
+          echo "=== Updated tauri.conf.json ==="
+          cat tauri.conf.json
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -127,7 +130,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: bun tauri build ${{ matrix.args }} --config src-tauri/tauri.macos.conf.json
+        run: bun tauri build ${{ matrix.args }}
 
       - name: Build Tauri app (Windows)
         if: matrix.platform == 'windows-latest'
