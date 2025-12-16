@@ -18,45 +18,35 @@ export default function LanguageSwitcher() {
     setIsOpen(false)
   }
 
+  const code = currentLanguage === 'zh-Hant' ? 'ZH' : currentLanguage === 'ja-JP' ? 'JA' : currentLanguage === 'en-US' ? 'EN' : currentLanguage
+
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 bg-card/70 hover:bg-card transition-colors shadow-sm hover:shadow"
+        className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
       >
-        <Languages className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium">{currentLanguageInfo?.name}</span>
-        <svg
-          className={`w-4 h-4 transition-transform text-muted-foreground ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <Languages className="w-3 h-3" />
+        <span>{code}</span>
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-full min-w-[160px] max-h-60 overflow-y-auto overscroll-contain bg-background border border-border rounded-md shadow-lg z-50">
+        <div className="absolute bottom-full right-0 mb-1 min-w-[100px] bg-zinc-900 border border-zinc-800 rounded shadow-lg z-50">
           {supportedLanguages.map((language) => {
             const languageInfo = languageConfig[language as keyof typeof languageConfig]
             const isSelected = language === currentLanguage
-            const code = language === 'zh-Hant' ? 'ZH' : language === 'ja-JP' ? 'JA' : language === 'en-US' ? 'EN' : language
-            
+
             return (
               <button
                 key={language}
                 onClick={() => handleLanguageChange(language)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-accent transition-colors first:rounded-t-md last:rounded-b-md ${
-                  isSelected ? 'bg-accent' : ''
+                className={`w-full flex items-center gap-1.5 px-2 py-1 text-left text-[9px] hover:bg-zinc-800 transition-colors first:rounded-t last:rounded-b ${
+                  isSelected ? 'text-blue-400' : 'text-zinc-400'
                 }`}
               >
-                <span className="px-1.5 py-0.5 text-[10px] font-mono tracking-wide rounded bg-muted text-foreground/80 border border-border/60">
-                  {code}
-                </span>
-                <span className="text-sm font-medium">{languageInfo?.name}</span>
+                <span>{languageInfo?.name}</span>
                 {isSelected && (
-                  <svg className="w-4 h-4 ml-auto text-primary" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-2.5 h-2.5 ml-auto" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 )}

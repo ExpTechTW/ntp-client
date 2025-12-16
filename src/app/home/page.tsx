@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Power, Globe, Activity, Clock, Package, GitCompare } from 'lucide-react'
+import { RefreshCw, CheckCircle2, AlertCircle, Loader2, Timer, Power, Globe, Activity, Clock, Package, GitCompare, Sun, Moon } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
+import { getVersion } from '@tauri-apps/api/app'
+import { open } from '@tauri-apps/plugin-shell'
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { useTranslation } from 'react-i18next'
 import '@/i18n'
@@ -28,6 +30,8 @@ interface NtpResult {
   root_dispersion: number
   ref_id: string
   ref_time: number
+  pre_sync_offset: number
+  post_sync_offset: number
 }
 
 const NTP_SERVERS = [
@@ -87,6 +91,8 @@ export default function HomePage() {
   const [autostart, setAutostart] = useState(false)
   const [tab, setTab] = useState<TabId>('time')
   const [isCompact, setIsCompact] = useState(false)
+  const [version, setVersion] = useState('')
+  const [isDark, setIsDark] = useState(true)
   const refs = useRef<{ time?: NodeJS.Timeout; sync?: NodeJS.Timeout; cd?: NodeJS.Timeout; syncing?: boolean }>({})
 
   const query = async (srv: string) => {
@@ -105,6 +111,7 @@ export default function HomePage() {
           leap: 0, version: 4, mode: 4, stratum: 1,
           poll: 0, precision: 0, root_delay: 0, root_dispersion: 0,
           ref_id: '', ref_time: 0,
+          pre_sync_offset: res.pre_sync_offset, post_sync_offset: res.post_sync_offset,
         })
       } else {
         setResult(null)
@@ -128,6 +135,7 @@ export default function HomePage() {
     setNow(new Date())
     refs.current.time = setInterval(() => setNow(new Date()), 50)
     isEnabled().then(setAutostart).catch(() => {})
+    getVersion().then(v => setVersion(`v${v}`)).catch(() => {})
 
     const checkSize = () => setIsCompact(window.innerHeight < 300)
     checkSize()
@@ -152,7 +160,7 @@ export default function HomePage() {
   const mm = String(now.getMinutes()).padStart(2, '0')
   const ss = String(now.getSeconds()).padStart(2, '0')
   const ms = String(now.getMilliseconds()).padStart(3, '0')
-  const weekday = `週${WEEKDAYS[now.getDay()]}`
+  const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} 星期${WEEKDAYS[now.getDay()]}`
   const status = result ? getStatus(result.offset) : null
 
   const Digit = ({ children, className = '' }: { children: string; className?: string }) => (
@@ -179,7 +187,7 @@ export default function HomePage() {
             <Digit className="text-base text-zinc-500 w-[1ch]">{ms[1]}</Digit>
             <Digit className="text-base text-zinc-500 w-[1ch]">{ms[2]}</Digit>
           </div>
-          <p className="text-xs text-zinc-500 mt-1" suppressHydrationWarning>{weekday}</p>
+          <p className="text-xs text-zinc-500 mt-1" suppressHydrationWarning>{dateStr}</p>
           {status && (
             <p className={`text-[9px] font-mono ${status.color}`}>
               {result!.offset >= 0 ? '+' : ''}{fmtS(result!.offset)}
@@ -192,7 +200,6 @@ export default function HomePage() {
 
   return (
     <div className="h-screen bg-zinc-950 text-white select-none overflow-hidden flex flex-col">
-      <div className="absolute top-1.5 right-1.5 z-20"><LanguageSwitcher /></div>
 
       <div className="flex-1 flex flex-col items-center justify-center min-h-0 py-2">
         <div className="flex items-baseline justify-center font-mono">
@@ -209,7 +216,7 @@ export default function HomePage() {
           <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[1]}</Digit>
           <Digit className="text-2xl sm:text-3xl text-zinc-500 w-[1ch]">{ms[2]}</Digit>
         </div>
-        <p className="text-sm text-zinc-500 mt-1" suppressHydrationWarning>{weekday}</p>
+        <p className="text-sm text-zinc-500 mt-1" suppressHydrationWarning>{dateStr}</p>
         {result?.success && status && (
           <div className="flex items-center gap-2 mt-1">
             <span className={`text-xs ${status.color}`}>{status.label}</span>
@@ -305,10 +312,10 @@ export default function HomePage() {
 
                 {tab === 'compare' && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-                    <Info label="本地 (T4)" value={fmtTs(result.t4)} />
-                    <Info label="伺服器 (T3)" value={fmtTs(result.t3)} />
-                    <Info label="校正後" value={fmtTs(result.t4 + result.offset)} />
-                    <Info label="偏移" value={<span className={status?.color}>{result.offset >= 0 ? '+' : ''}{fmtS(result.offset)}</span>} />
+                    <Info label="校正前誤差" value={<span className={getStatus(result.pre_sync_offset).color}>{result.pre_sync_offset >= 0 ? '+' : ''}{fmtS(result.pre_sync_offset)}</span>} sub="同步前測量" />
+                    <Info label="校正後誤差" value={<span className={status?.color}>{result.post_sync_offset >= 0 ? '+' : ''}{fmtS(result.post_sync_offset)}</span>} sub="同步後驗證" />
+                    <Info label="校正量" value={fmtS(result.pre_sync_offset - result.post_sync_offset)} sub="改善幅度" />
+                    <Info label="Delay" value={fmtS(result.delay)} sub="網路延遲" />
                   </div>
                 )}
               </div>
@@ -326,13 +333,32 @@ export default function HomePage() {
           )}
         </div>
 
-        <div className="flex items-center justify-between px-0.5">
-          <button onClick={toggleAutostart} className="flex items-center gap-1 text-[9px] text-zinc-600 hover:text-zinc-400">
-            <Power className={`w-2.5 h-2.5 ${autostart ? 'text-emerald-500' : ''}`} />
-            <span>開機啟動</span>
-            <span className={`w-1 h-1 rounded-full ${autostart ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
-          </button>
-          <span className="text-[8px] text-zinc-700">v1.0.0</span>
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-zinc-500 font-mono">{version}</span>
+            <button onClick={toggleAutostart} className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">
+              <Power className={`w-3 h-3 ${autostart ? 'text-emerald-400' : ''}`} />
+              <span>開機啟動</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${autostart ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => open('https://github.com/ExpTechTW/ntp-client')}
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+            <LanguageSwitcher />
+          </div>
         </div>
       </div>
     </div>

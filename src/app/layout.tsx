@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { ThemeProvider } from '@/components/ThemeProvider';
-import Footer from '@/components/footer';
 import '@/i18n'
 
 export const metadata: Metadata = {
@@ -16,16 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-TW" suppressHydrationWarning>
-      <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Footer />
-        </ThemeProvider>
+      <body className="bg-zinc-950">
+        {children}
       </body>
     </html>
   )

@@ -78,8 +78,8 @@ fn set_time_internal(
 #[cfg(target_os = "windows")]
 fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
     use chrono::{Datelike, Timelike};
-    use windows_sys::Win32::Foundation::{GetLastError, SYSTEMTIME};
-    use windows_sys::Win32::System::Time::SetSystemTime;
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::System::SystemInformation::{SetSystemTime, SYSTEMTIME};
 
     let secs = (unix_ms / 1000.0) as i64;
     let millis = (unix_ms % 1000.0) as u16;
@@ -338,6 +338,8 @@ pub struct SyncResult {
     pub t2: f64,
     pub t3: f64,
     pub t4: f64,
+    pub pre_sync_offset: f64,
+    pub post_sync_offset: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -470,6 +472,8 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         t2: ntp_result.t2,
         t3: ntp_result.t3,
         t4: ntp_result.t4,
+        pre_sync_offset: median_offset,
+        post_sync_offset,
     })
     .map_err(|e| e.to_string())
 }
