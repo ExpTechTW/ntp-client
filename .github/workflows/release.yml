@@ -77,14 +77,10 @@ jobs:
           cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
           cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
           mkdir -p binaries
-          cp target/x86_64-apple-darwin/release/ntp-client-sidecar binaries/ntp-client-sidecar-x86_64-apple-darwin
-          cp target/aarch64-apple-darwin/release/ntp-client-sidecar binaries/ntp-client-sidecar-aarch64-apple-darwin
           lipo -create \
             target/x86_64-apple-darwin/release/ntp-client-sidecar \
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
             -output binaries/ntp-client-sidecar-universal-apple-darwin
-          codesign --force --sign - --timestamp=none --options runtime binaries/ntp-client-sidecar-x86_64-apple-darwin || true
-          codesign --force --sign - --timestamp=none --options runtime binaries/ntp-client-sidecar-aarch64-apple-darwin || true
           codesign --force --sign - --timestamp=none --options runtime binaries/ntp-client-sidecar-universal-apple-darwin || true
           ls -la binaries/
           cat > tauri.macos.conf.json << 'EOF'
