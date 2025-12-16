@@ -89,45 +89,33 @@ fn test_sidecar_connection() -> bool {
 #[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn install_sidecar() -> Result<String, String> {
+    println!("[SIDECAR] 開始安裝 sidecar...");
+
     let exe_path =
         std::env::current_exe().map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
+    println!("[SIDECAR] 執行檔路徑: {}", exe_path.to_string_lossy());
 
-    let mut sidecar_paths = Vec::new();
+    // Tauri bundle.resources 會將 resources/ 目錄複製到 Contents/Resources/resources/
+    let sidecar_path = exe_path
+        .parent() // Contents/MacOS
+        .and_then(|p| p.parent()) // Contents
+        .map(|p| p.join("Resources/resources/ntp-client-sidecar"))
+        .ok_or_else(|| "無法取得 app bundle 路徑".to_string())?;
 
-    if let Some(macos_dir) = exe_path.parent() {
-        // Tauri resources 會將 sidecar 放在 Contents/Resources/
-        if let Some(contents_dir) = macos_dir.parent() {
-            sidecar_paths.push(contents_dir.join("Resources/ntp-client-sidecar"));
-        }
+    println!("[SIDECAR] 預期 sidecar 路徑: {}", sidecar_path.to_string_lossy());
+
+    if !sidecar_path.exists() {
+        let err = format!("找不到 sidecar: {}", sidecar_path.to_string_lossy());
+        println!("[SIDECAR] 錯誤: {}", err);
+        return Err(err);
     }
 
-    if let Ok(current_dir) = std::env::current_dir() {
-        // Sidecar is in separate crate: src-tauri/sidecar/
-        sidecar_paths.push(current_dir.join("sidecar/target/debug/ntp-client-sidecar"));
-        sidecar_paths.push(current_dir.join("sidecar/target/release/ntp-client-sidecar"));
-        sidecar_paths.push(current_dir.join("src-tauri/sidecar/target/debug/ntp-client-sidecar"));
-        sidecar_paths.push(current_dir.join("src-tauri/sidecar/target/release/ntp-client-sidecar"));
-    }
-
-    let sidecar_source = sidecar_paths.iter().find(|p| p.exists()).ok_or_else(|| {
-        format!(
-            "找不到 sidecar 二進制文件。已檢查的路徑:\n{}",
-            sidecar_paths
-                .iter()
-                .map(|p| format!("  - {}", p.to_string_lossy()))
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
-    })?;
-
-    println!(
-        "[SIDECAR] 找到 sidecar 二進制文件: {}",
-        sidecar_source.to_string_lossy()
-    );
+    println!("[SIDECAR] 找到 sidecar 二進制文件");
 
     let temp_sidecar = "/tmp/ntp-client-sidecar-install";
-    std::fs::copy(&sidecar_source, temp_sidecar)
+    std::fs::copy(&sidecar_path, temp_sidecar)
         .map_err(|e| format!("無法複製 sidecar 到臨時目錄: {}", e))?;
+    println!("[SIDECAR] 已複製到臨時目錄: {}", temp_sidecar);
 
     let install_script = format!(
         r#"
