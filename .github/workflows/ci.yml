@@ -74,17 +74,33 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: |
           cd src-tauri
+          # Build for both architectures
           cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
           cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
+
           mkdir -p binaries
+
+          # Copy architecture-specific binaries (Tauri needs these during compilation)
+          cp target/x86_64-apple-darwin/release/ntp-client-sidecar binaries/ntp-client-sidecar-x86_64-apple-darwin
+          cp target/aarch64-apple-darwin/release/ntp-client-sidecar binaries/ntp-client-sidecar-aarch64-apple-darwin
+
+          # Create universal binary using lipo (for final bundle)
           lipo -create \
-            target/x86_64-apple-darwin/release/ntp-client-sidecar \
-            target/aarch64-apple-darwin/release/ntp-client-sidecar \
+            binaries/ntp-client-sidecar-x86_64-apple-darwin \
+            binaries/ntp-client-sidecar-aarch64-apple-darwin \
             -output binaries/ntp-client-sidecar-universal-apple-darwin
-          codesign --force --sign - --timestamp=none --options runtime binaries/ntp-client-sidecar-universal-apple-darwin || true
-          cp binaries/ntp-client-sidecar-universal-apple-darwin binaries/ntp-client-sidecar-x86_64-apple-darwin
-          cp binaries/ntp-client-sidecar-universal-apple-darwin binaries/ntp-client-sidecar-aarch64-apple-darwin
+
+          # Ad-hoc sign all binaries
+          codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-x86_64-apple-darwin || true
+          codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-aarch64-apple-darwin || true
+          codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-universal-apple-darwin || true
+
+          # Verify all files exist
+          echo "=== Sidecar binaries ==="
           ls -la binaries/
+          file binaries/*
+
+          # Create macOS-specific config
           cat > tauri.macos.conf.json << 'EOF'
           {
             "bundle": {
