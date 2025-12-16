@@ -72,8 +72,6 @@ jobs:
 
       - name: Build sidecar (macOS)
         if: matrix.platform == 'macos-latest'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           cd src-tauri/sidecar
           # Build for both architectures from separate crate
@@ -89,10 +87,18 @@ jobs:
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
             -output ../resources/ntp-client-sidecar
 
+          # Find Developer ID signing identity from imported certificates
+          echo "=== Available signing identities ==="
+          security find-identity -v -p codesigning || true
+
+          # Extract Developer ID Application identity
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/' || echo "")
+
           # Sign with Developer ID certificate (required for notarization)
           # Must include hardened runtime and secure timestamp
-          if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
-            codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
+          if [ -n "$SIGNING_IDENTITY" ]; then
+            echo "Using signing identity: $SIGNING_IDENTITY"
+            codesign --force --sign "$SIGNING_IDENTITY" \
               --options runtime \
               --timestamp \
               ../resources/ntp-client-sidecar

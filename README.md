@@ -1,34 +1,80 @@
-# NTP Client
+<div align="center">
+
+# 🕐 NTP Client
+
+**現代化網路時間協議客戶端 | Modern Network Time Protocol Client**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
 [![Version](https://img.shields.io/badge/version-1.0.0--beta.1-green.svg)](https://github.com/ExpTechTW/ntp-client/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/ExpTechTW/ntp-client/releases)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 
-<p align="center">
-  <strong>現代化 NTP 時間同步客戶端</strong>
-</p>
-
-<p align="center">
-  <a href="README.md">繁體中文</a> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a>
-</p>
+[繁體中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
 ---
 
-NTP Client 是一款功能強大的網路時間協議客戶端工具，幫助您連接到 NTP 伺服器，查詢準確的時間並同步系統時鐘。透過直觀的介面，輕鬆檢查時間偏差並保持系統時間的準確性。
+<p align="center">
+  <strong>功能強大的 NTP 時間同步工具，幫助您保持系統時間的準確性</strong>
+</p>
 
-## 功能特色
+[功能特色](#-功能特色) • [快速開始](#-快速開始) • [下載安裝](#-下載與安裝) • [使用指南](#-使用指南) • [技術架構](#-技術架構) • [開發指南](#-開發指南)
 
-- **NTP 時間同步**：自動連接 NTP 伺服器並同步系統時間
-- **5 次測量中位數**：使用 5 次 NTP 測量取中位數，提高準確性
-- **校正前後對比**：顯示同步前誤差與同步後驗證結果
-- **60 秒自動同步**：每 60 秒自動進行一次時間同步
-- **多伺服器支援**：支援 ExpTech、Apple、Google、Cloudflare 等 NTP 伺服器
-- **詳細資訊顯示**：時間戳、計算公式、NTP 封包資訊、校正對比四個分頁
-- **多語言支援**：支援繁體中文、英文和日文
-- **深淺色主題**：可切換深色/淺色模式
-- **跨平台**：支援 macOS、Windows 和 Linux
+</div>
 
-## 下載與安裝
+---
+
+## ✨ 功能特色
+
+### 🎯 核心功能
+
+- **⏱️ 精確時間同步**：自動連接 NTP 伺服器並同步系統時間
+- **📊 5 次測量中位數**：使用 5 次 NTP 測量取中位數，大幅提高準確性
+- **🔄 自動同步**：每 60 秒自動進行一次時間同步
+- **📈 校正前後對比**：顯示同步前誤差與同步後驗證結果，驗證同步效果
+
+### 🌐 多伺服器支援
+
+支援多個知名 NTP 伺服器：
+
+| 伺服器         | 地址                  | 說明                       |
+| -------------- | --------------------- | -------------------------- |
+| **ExpTech**    | `time.exptech.com.tw` | 台灣本地伺服器（預設）     |
+| **Apple**      | `time.apple.com`      | Apple 官方時間伺服器       |
+| **Google**     | `time.google.com`     | Google 公共時間伺服器      |
+| **Cloudflare** | `time.cloudflare.com` | Cloudflare 全球 CDN 伺服器 |
+
+### 📱 詳細資訊顯示
+
+四個專業分頁提供完整資訊：
+
+- **⏰ 時間戳**：T1/T2/T3/T4 時間點詳細記錄
+- **🧮 計算**：Offset、Delay、RTT、處理時間等關鍵指標
+- **📦 封包**：LI/VN/Mode、Stratum、Poll、Precision 等 NTP 封包資訊
+- **📊 對比**：校正前誤差、校正後誤差、校正量、網路延遲分析
+
+### 🎨 使用者體驗
+
+- **🌍 多語言支援**：繁體中文、英文、日文三種語言
+- **🌓 深淺色主題**：可切換深色/淺色模式，保護眼睛
+- **💻 跨平台支援**：macOS、Windows、Linux 全平台支援
+- **⚡ 輕量高效**：基於 Tauri 2，體積小、性能優異
+
+---
+
+## 🚀 快速開始
+
+### 系統需求
+
+| 平台        | 最低版本    | 備註                             |
+| ----------- | ----------- | -------------------------------- |
+| **macOS**   | 10.13+      | 需要管理員權限同步時間           |
+| **Windows** | Windows 10+ | 需要 WebView2 執行環境           |
+| **Linux**   | -           | 需要 GLib >= 2.70, WebKitGTK 4.1 |
+
+---
+
+## 📥 下載與安裝
 
 ### 快速下載
 
@@ -43,106 +89,290 @@ NTP Client 是一款功能強大的網路時間協議客戶端工具，幫助您
 ### 安裝步驟
 
 <details>
-<summary>macOS</summary>
+<summary><b>🍎 macOS</b></summary>
 
-1. 下載 `.app` 檔案
-2. 將應用程式拖拽到 Applications 資料夾
-3. 首次執行需要在「系統設定」→「隱私權與安全性」中允許執行
-4. 同步時間需要管理員權限
+#### 安裝步驟
 
-> **注意**：macOS 10.13 或更高版本
+1. **下載應用程式**
+
+   - 從 [Releases](https://github.com/ExpTechTW/ntp-client/releases/latest) 下載 `.dmg` 或 `.app` 檔案
+
+2. **安裝應用程式**
+
+   - 將應用程式拖拽到 `Applications` 資料夾
+
+3. **首次執行設定**
+
+   - 首次執行時，macOS 可能會提示「無法驗證開發者」
+   - 前往「系統設定」→「隱私權與安全性」
+   - 點擊「仍要開啟」允許執行
+
+4. **權限設定**
+   - 同步時間需要管理員權限
+   - 系統會自動提示輸入密碼
+
+> **💡 提示**：macOS 10.13 或更高版本才能執行
 
 </details>
 
 <details>
-<summary>Windows</summary>
+<summary><b>🪟 Windows</b></summary>
 
-1. 下載 `.exe` 安裝程式
-2. 執行安裝程式，按照指示完成安裝
-3. 同步時間需要以管理員身份執行
+#### 安裝步驟
 
-> **注意**：Windows 10 或更高版本，需要 WebView2 執行環境
+1. **下載安裝程式**
+
+   - 從 [Releases](https://github.com/ExpTechTW/ntp-client/releases/latest) 下載 `.exe` 安裝程式
+
+2. **執行安裝**
+
+   - 雙擊 `.exe` 檔案執行安裝程式
+   - 按照安裝精靈指示完成安裝
+
+3. **權限設定**
+   - 同步時間需要以管理員身份執行
+   - 右鍵點擊應用程式，選擇「以系統管理員身分執行」
+
+> **💡 提示**：需要 Windows 10 或更高版本，並安裝 WebView2 執行環境
 
 </details>
 
 <details>
-<summary>Linux</summary>
+<summary><b>🐧 Linux</b></summary>
 
-1. 下載 `.AppImage` 檔案
-2. 設定執行權限：
+#### 安裝步驟
+
+1. **下載 AppImage**
+
+   - 從 [Releases](https://github.com/ExpTechTW/ntp-client/releases/latest) 下載 `.AppImage` 檔案
+
+2. **設定執行權限**
+
    ```bash
    chmod +x ntp-client_*.AppImage
    ```
-3. 執行應用程式
-4. 同步時間需要 `pkexec` 權限
 
-> **注意**：需要 GLib >= 2.70, WebKitGTK 4.1
+3. **執行應用程式**
+
+   ```bash
+   ./ntp-client_*.AppImage
+   ```
+
+4. **權限設定**
+   - 同步時間需要 `pkexec` 權限
+   - 系統會自動提示輸入密碼
+
+> **💡 提示**：需要 GLib >= 2.70 和 WebKitGTK 4.1
 
 </details>
 
-## 使用方法
+---
 
-1. 啟動應用程式
-2. 從下拉選單選擇 NTP 伺服器（預設為 `time.exptech.com.tw`）
-3. 應用程式會自動進行時間同步
-4. 查看結果：
-   - **時間戳**：T1/T2/T3/T4 時間點
-   - **計算**：Offset、Delay、RTT、處理時間
-   - **封包**：LI/VN/Mode、Stratum、Poll、Precision 等 NTP 封包資訊
-   - **對比**：校正前誤差、校正後誤差、校正量、網路延遲
+## 📖 使用指南
 
-### 支援的 NTP 伺服器
+### 基本使用
 
-| 伺服器 | 地址 |
-|--------|------|
-| ExpTech | `time.exptech.com.tw` |
-| Apple | `time.apple.com` |
-| Google | `time.google.com` |
-| Cloudflare | `time.cloudflare.com` |
+1. **啟動應用程式**
 
-## 技術架構
+   - 雙擊應用程式圖示啟動
 
-- **前端**：Next.js 15 + React 19 + Tailwind CSS 4
-- **後端**：Tauri 2 + Rust
-- **NTP 協議**：原生 UDP 實作，支援 NTPv4
-- **國際化**：i18next
+2. **選擇 NTP 伺服器**
 
-## 開發
+   - 從下拉選單選擇 NTP 伺服器（預設為 `time.exptech.com.tw`）
+   - 應用程式會自動開始同步
+
+3. **查看同步結果**
+   - 主畫面顯示校正後的時間和日期
+   - 查看時間偏差狀態（極佳/良好/正常/偏差/異常）
+
+### 分頁說明
+
+#### ⏰ 時間戳 (Timestamp)
+
+顯示 NTP 協議中的四個關鍵時間點：
+
+- **T1 發送**：客戶端發送請求的時間
+- **T2 接收**：伺服器接收請求的時間
+- **T3 回應**：伺服器發送回應的時間
+- **T4 收到**：客戶端收到回應的時間
+
+#### 🧮 計算 (Calculation)
+
+顯示時間同步的關鍵計算指標：
+
+- **Offset**：時間偏移量 `((T2-T1)+(T3-T4))/2`
+- **Delay**：網路延遲 `(T4-T1)-(T3-T2)`
+- **RTT**：往返時間 `T4-T1`
+- **處理時間**：伺服器處理時間 `T3-T2`
+
+#### 📦 封包 (Packet)
+
+顯示 NTP 封包的詳細資訊：
+
+- **LI/VN/Mode**：Leap Indicator / Version Number / Mode
+- **Stratum**：階層（0-16，數字越小越準確）
+- **Poll**：輪詢間隔
+- **Precision**：精度
+- **Root Delay**：根延遲
+- **Root Dispersion**：根離散
+- **Ref ID**：參考 ID
+- **Ref Time**：參考時間
+
+#### 📊 對比 (Compare)
+
+顯示同步前後的對比分析：
+
+- **校正前誤差**：同步前測量的時間誤差
+- **校正後誤差**：同步後驗證的時間誤差
+- **校正量**：實際校正的時間量
+- **網路延遲**：與伺服器的網路延遲
+
+### 狀態說明
+
+時間偏差狀態分為五個等級：
+
+| 狀態        | 誤差範圍 | 說明         |
+| ----------- | -------- | ------------ |
+| 🟢 **極佳** | < 10ms   | 時間非常準確 |
+| 🟢 **良好** | < 50ms   | 時間準確     |
+| 🟡 **正常** | < 100ms  | 時間可接受   |
+| 🟠 **偏差** | < 500ms  | 時間有偏差   |
+| 🔴 **異常** | ≥ 500ms  | 時間偏差過大 |
+
+---
+
+## 🏗️ 技術架構
+
+### 技術棧
+
+| 層級         | 技術         | 版本  |
+| ------------ | ------------ | ----- |
+| **前端框架** | Next.js      | 15.5+ |
+| **UI 框架**  | React        | 19.2+ |
+| **樣式**     | Tailwind CSS | 4.1+  |
+| **後端框架** | Tauri        | 2.8+  |
+| **系統語言** | Rust         | 1.70+ |
+| **NTP 協議** | 原生 UDP     | NTPv4 |
+| **國際化**   | i18next      | 25.6+ |
+
+### 架構特點
+
+- **⚡ 高性能**：基於 Rust 後端，性能優異
+- **📦 輕量級**：使用 Tauri 2，應用程式體積小
+- **🔒 安全性**：原生 NTP 協議實作，無第三方依賴
+- **🌐 跨平台**：單一程式碼庫支援多平台
+
+---
+
+## 🛠️ 開發指南
 
 ### 環境需求
 
-- [Bun](https://bun.sh/) (推薦) 或 Node.js
-- [Rust](https://www.rust-lang.org/)
-- [Tauri CLI](https://tauri.app/)
+- **[Bun](https://bun.sh/)** (推薦) 或 **Node.js** 18+
+- **[Rust](https://www.rust-lang.org/)** 1.70+
+- **[Tauri CLI](https://tauri.app/)** 2.8+
 
 ### 安裝依賴
 
 ```bash
+# 使用 Bun（推薦）
 bun install
+
+# 或使用 npm
+npm install
 ```
 
 ### 開發模式
 
 ```bash
+# 啟動開發伺服器
 bun run tauri:dev
+
+# 或使用 npm
+npm run tauri:dev
 ```
 
-### 建置
+### 建置應用程式
 
 ```bash
+# 建置所有平台
 bun run tauri:build
+
+# 或使用 npm
+npm run tauri:build
 ```
 
-## 授權條款
+### 專案結構
+
+```
+ntp-client/
+├── src/                    # 前端原始碼
+│   ├── app/                # Next.js 應用程式
+│   ├── components/         # React 元件
+│   ├── lib/               # 工具函數
+│   └── i18n.ts            # 國際化設定
+├── src-tauri/              # Tauri 後端
+│   ├── src/               # Rust 原始碼
+│   │   ├── main.rs        # 主程式
+│   │   ├── ntp.rs         # NTP 協議實作
+│   │   └── offset.rs      # 時間偏移計算
+│   └── Cargo.toml         # Rust 依賴
+├── public/                 # 靜態資源
+│   └── locales/           # 翻譯檔案
+└── README.md              # 本文件
+```
+
+---
+
+## 📄 授權條款
 
 本專案採用 [AGPL-3.0](License) 授權條款。
 
-## 貢獻
+> **AGPL-3.0**：這是一個自由軟體授權條款，允許您自由使用、修改和分發，但如果您修改並分發，必須公開原始碼。
 
-歡迎貢獻！如果您想為此專案做出貢獻，請提交 Pull Request 或開啟 Issue。
+---
+
+## 🤝 貢獻
+
+我們歡迎所有形式的貢獻！
+
+### 如何貢獻
+
+1. **Fork** 本專案
+2. 建立功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 開啟 **Pull Request**
+
+### 貢獻指南
+
+- 提交前請確保程式碼通過 lint 檢查
+- 請遵循現有的程式碼風格
+- 新增功能時請更新相關文件
+- 提交時請使用清晰的 commit message
+
+---
+
+## 📞 支援
+
+- **問題回報**：[GitHub Issues](https://github.com/ExpTechTW/ntp-client/issues)
+- **功能建議**：[GitHub Discussions](https://github.com/ExpTechTW/ntp-client/discussions)
+- **官方網站**：[ExpTech](https://github.com/ExpTechTW)
+
+---
+
+<div align="center">
+
+### ⭐ 如果這個專案對您有幫助，請給我們一個 Star！
 
 ---
 
 <p align="center">
-  由 <a href="https://github.com/ExpTechTW">ExpTech</a> 開發維護
+  <strong>由 <a href="https://github.com/ExpTechTW">ExpTech</a> 開發維護</strong>
 </p>
+
+<p align="center">
+  <sub>Made with ❤️ by ExpTech Team</sub>
+</p>
+
+</div>
