@@ -1,11 +1,4 @@
-use serde::{Deserialize, Serialize};
 use std::process::Command;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AutostartResult {
-    pub success: bool,
-    pub message: String,
-}
 
 #[cfg(target_os = "windows")]
 const TASK_NAME: &str = "NTPClientAutoStart";
