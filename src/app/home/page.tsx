@@ -90,7 +90,7 @@ export default function HomePage() {
   const [isQuerying, setIsQuerying] = useState(false)
   const [result, setResult] = useState<NtpResult | null>(null)
   const [now, setNow] = useState(new Date())
-  const [countdown, setCountdown] = useState(60)
+  const [countdown, setCountdown] = useState(0)
   const [tab, setTab] = useState<TabId>('time')
   const [isCompact, setIsCompact] = useState(false)
   const [version, setVersion] = useState('')
@@ -107,10 +107,10 @@ export default function HomePage() {
   }
 
   const query = async (srv: string) => {
-    if (!srv.trim() || isQuerying || refs.current.syncing) return
+    if (!srv.trim() || refs.current.syncing) return
     refs.current.syncing = true
     setIsQuerying(true)
-    setCountdown(60)
+    setCountdown(0)
     setPermissionError(false)
     setSidecarNotInstalled(false)
 
@@ -136,6 +136,7 @@ export default function HomePage() {
     } finally {
       setIsQuerying(false)
       refs.current.syncing = false
+      setCountdown(60)
     }
   }
 
@@ -189,10 +190,18 @@ export default function HomePage() {
 
   useEffect(() => {
     query(server)
-    refs.current.sync = setInterval(() => query(server), 60000)
-    refs.current.cd = setInterval(() => setCountdown(p => (p <= 1 ? 60 : p - 1)), 1000)
+    refs.current.cd = setInterval(() => {
+      setCountdown(p => {
+        if (p <= 1) {
+          if (!refs.current.syncing) {
+            query(server)
+          }
+          return 0
+        }
+        return p - 1
+      })
+    }, 1000)
     return () => {
-      clearInterval(refs.current.sync)
       clearInterval(refs.current.cd)
     }
   }, [server])
@@ -342,7 +351,7 @@ export default function HomePage() {
             ))}
           </select>
           <span className={`text-[9px] tabular-nums flex items-center gap-0.5 ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
-            <Timer className="w-2.5 h-2.5" />{countdown}s
+            <Timer className="w-2.5 h-2.5" />{isQuerying ? '--' : `${countdown}s`}
           </span>
           <button
             onClick={() => query(server)}

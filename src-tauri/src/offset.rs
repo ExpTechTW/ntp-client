@@ -198,7 +198,6 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
     match crate::sidecar::set_time_via_sidecar(unix_ms) {
         Ok(msg) => Ok(msg),
         Err(e) => {
-            // 如果 sidecar 連接失敗，可能是服務未運行
             let code = if e.contains("無法接收回應") || e.contains("無法發送請求") {
                 "SIDECAR_NOT_RUNNING"
             } else {
