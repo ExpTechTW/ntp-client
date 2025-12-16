@@ -94,7 +94,22 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
             .await?;
 
         println!("update installed");
-        app.restart();
+
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+            let app_path = "/Applications/NTP Client.app";
+            let _ = Command::new("sh")
+                .arg("-c")
+                .arg(format!("sleep 1 && open -a '{}'", app_path))
+                .spawn();
+            app.exit(0);
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            app.restart();
+        }
     }
 
     Ok(())

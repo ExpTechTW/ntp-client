@@ -80,7 +80,7 @@
       "endpoints": [
         "https://github.com/ExpTechTW/ntp-client/releases/latest/download/latest.json"
       ],
-      "windows": { "installMode": "basicUi" }
+      "windows": { "installMode": "passive" }
     }
   }
 }
