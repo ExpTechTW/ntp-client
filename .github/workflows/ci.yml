@@ -78,37 +78,29 @@ jobs:
           cargo build --release --target x86_64-apple-darwin --bin ntp-client-sidecar
           cargo build --release --target aarch64-apple-darwin --bin ntp-client-sidecar
 
-          # Create binaries directory (relative to tauri.conf.json)
-          mkdir -p binaries
+          # Create resources directory
+          mkdir -p resources
 
           # Create universal binary using lipo
           lipo -create \
             target/x86_64-apple-darwin/release/ntp-client-sidecar \
             target/aarch64-apple-darwin/release/ntp-client-sidecar \
-            -output binaries/ntp-client-sidecar-universal-apple-darwin
-
-          # Create symlinks for arch-specific names pointing to universal binary
-          # This is the workaround for Tauri universal build sidecar bundling
-          cd binaries
-          ln -sf ntp-client-sidecar-universal-apple-darwin ntp-client-sidecar-x86_64-apple-darwin
-          ln -sf ntp-client-sidecar-universal-apple-darwin ntp-client-sidecar-aarch64-apple-darwin
-          cd ..
+            -output resources/ntp-client-sidecar
 
           # Ad-hoc sign the universal binary
-          codesign --force --sign - --timestamp=none binaries/ntp-client-sidecar-universal-apple-darwin || true
+          codesign --force --sign - --timestamp=none resources/ntp-client-sidecar || true
 
           # Verify
-          echo "=== Sidecar binaries ==="
-          ls -la binaries/
-          file binaries/*
+          echo "=== Sidecar binary ==="
+          ls -la resources/
+          file resources/ntp-client-sidecar
 
       - name: Patch tauri.conf.json for macOS sidecar
         if: matrix.platform == 'macos-latest'
         run: |
           cd src-tauri
-          # Add externalBin - path relative to tauri.conf.json
-          # Tauri will look for binaries/ntp-client-sidecar-$TARGET_TRIPLE
-          jq '.bundle.externalBin = ["binaries/ntp-client-sidecar"]' tauri.conf.json > tauri.conf.json.tmp
+          # Add sidecar as resource - will be copied to Contents/Resources/
+          jq '.bundle.resources = ["resources/ntp-client-sidecar"]' tauri.conf.json > tauri.conf.json.tmp
           mv tauri.conf.json.tmp tauri.conf.json
           echo "=== Updated tauri.conf.json ==="
           cat tauri.conf.json
