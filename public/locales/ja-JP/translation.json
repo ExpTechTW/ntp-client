@@ -17,7 +17,8 @@
       "time": "タイムスタンプ",
       "calc": "計算",
       "packet": "パケット",
-      "compare": "比較"
+      "compare": "比較",
+      "history": "履歴"
     },
     "status": {
       "excellent": "優秀",
@@ -74,6 +75,18 @@
       "refId": "参照 ID",
       "refTime": "参照時刻"
     },
+    "historyLabels": {
+      "samples": "サンプル数",
+      "avgOffset": "平均オフセット",
+      "avgDelay": "平均遅延",
+      "maxOffset": "最大オフセット",
+      "stdDev": "標準偏差",
+      "stability": "安定性",
+      "offsetTrend": "オフセット推移",
+      "delayDist": "遅延分布",
+      "waitingData": "データ収集中...",
+      "viewDetails": "詳細分析を表示"
+    },
     "sidecar": {
       "installRequired": "システム時刻を設定するには Sidecar Server のインストールが必要です",
       "installing": "インストール中...",
@@ -82,6 +95,51 @@
     },
     "systemTime": "システム時刻",
     "syncing": "同期中..."
+  },
+  "history": {
+    "title": "履歴分析",
+    "subtitle": "{{count}} / {{max}} サンプルを収集",
+    "noData": "データなし",
+    "noDataSub": "同期後にデータを表示します",
+    "overview": "概要統計",
+    "percentiles": "パーセンタイル",
+    "advanced": "詳細統計",
+    "accuracy": "精度分布",
+    "rawData": "生データ",
+    "recent": "件の最新",
+    "stats": {
+      "samples": "サンプル数",
+      "avgOffset": "平均オフセット",
+      "avgDelay": "平均遅延",
+      "stdDev": "標準偏差",
+      "stability": "安定性",
+      "range": "範囲",
+      "minOffset": "最小オフセット",
+      "maxOffset": "最大オフセット",
+      "cv": "変動係数",
+      "cvDesc": "Coefficient of Variation",
+      "skewness": "歪度",
+      "skewnessDesc": "分布の対称性",
+      "kurtosis": "尖度",
+      "kurtosisDesc": "分布の尖り具合"
+    },
+    "stability": {
+      "excellent": "優秀",
+      "good": "良好",
+      "normal": "正常",
+      "poor": "不安定"
+    },
+    "charts": {
+      "offsetTrend": "オフセット推移",
+      "delayTrend": "遅延推移",
+      "distribution": "オフセット分布ヒストグラム"
+    },
+    "table": {
+      "time": "時刻",
+      "offset": "オフセット",
+      "delay": "遅延",
+      "server": "サーバー"
+    }
   },
   "common": {
     "loading": "読み込み中...",

@@ -17,7 +17,8 @@
       "time": "時間戳",
       "calc": "計算",
       "packet": "封包",
-      "compare": "對比"
+      "compare": "對比",
+      "history": "歷史"
     },
     "status": {
       "excellent": "極佳",
@@ -74,6 +75,18 @@
       "refId": "參考 ID",
       "refTime": "參考時間"
     },
+    "historyLabels": {
+      "samples": "樣本數",
+      "avgOffset": "平均偏移",
+      "avgDelay": "平均延遲",
+      "maxOffset": "最大偏移",
+      "stdDev": "標準差",
+      "stability": "穩定性",
+      "offsetTrend": "偏移量趨勢",
+      "delayDist": "延遲分佈",
+      "waitingData": "等待數據收集...",
+      "viewDetails": "進入全頁分析"
+    },
     "sidecar": {
       "installRequired": "需要安裝 Sidecar Server 才能設定系統時間",
       "installing": "安裝中...",
@@ -82,6 +95,51 @@
     },
     "systemTime": "系統時間",
     "syncing": "同步中..."
+  },
+  "history": {
+    "title": "歷史分析",
+    "subtitle": "已收集 {{count}} / {{max}} 筆數據",
+    "noData": "尚無數據",
+    "noDataSub": "等待同步收集數據後顯示分析",
+    "overview": "概覽統計",
+    "percentiles": "百分位數",
+    "advanced": "進階統計",
+    "accuracy": "準確度分佈",
+    "rawData": "原始數據",
+    "recent": "筆最新",
+    "stats": {
+      "samples": "樣本數",
+      "avgOffset": "平均偏移",
+      "avgDelay": "平均延遲",
+      "stdDev": "標準差",
+      "stability": "穩定性",
+      "range": "範圍",
+      "minOffset": "最小偏移",
+      "maxOffset": "最大偏移",
+      "cv": "變異係數",
+      "cvDesc": "Coefficient of Variation",
+      "skewness": "偏度",
+      "skewnessDesc": "分佈對稱性",
+      "kurtosis": "峰度",
+      "kurtosisDesc": "分佈尖峰程度"
+    },
+    "stability": {
+      "excellent": "極佳",
+      "good": "良好",
+      "normal": "正常",
+      "poor": "較差"
+    },
+    "charts": {
+      "offsetTrend": "偏移量趨勢",
+      "delayTrend": "延遲趨勢",
+      "distribution": "偏移量分佈直方圖"
+    },
+    "table": {
+      "time": "時間",
+      "offset": "偏移量",
+      "delay": "延遲",
+      "server": "伺服器"
+    }
   },
   "common": {
     "loading": "載入中...",

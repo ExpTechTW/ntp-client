@@ -17,7 +17,8 @@
       "time": "Timestamp",
       "calc": "Calculation",
       "packet": "Packet",
-      "compare": "Compare"
+      "compare": "Compare",
+      "history": "History"
     },
     "status": {
       "excellent": "Excellent",
@@ -74,6 +75,18 @@
       "refId": "Ref ID",
       "refTime": "Ref Time"
     },
+    "historyLabels": {
+      "samples": "Samples",
+      "avgOffset": "Avg Offset",
+      "avgDelay": "Avg Delay",
+      "maxOffset": "Max Offset",
+      "stdDev": "Std Dev",
+      "stability": "Stability",
+      "offsetTrend": "Offset Trend",
+      "delayDist": "Delay Distribution",
+      "waitingData": "Waiting for data...",
+      "viewDetails": "View Detailed Analysis"
+    },
     "sidecar": {
       "installRequired": "Sidecar Server installation required to set system time",
       "installing": "Installing...",
@@ -82,6 +95,51 @@
     },
     "systemTime": "System Time",
     "syncing": "Syncing..."
+  },
+  "history": {
+    "title": "History Analysis",
+    "subtitle": "Collected {{count}} / {{max}} samples",
+    "noData": "No Data",
+    "noDataSub": "Waiting for sync to collect data",
+    "overview": "Overview Statistics",
+    "percentiles": "Percentiles",
+    "advanced": "Advanced Statistics",
+    "accuracy": "Accuracy Distribution",
+    "rawData": "Raw Data",
+    "recent": "recent",
+    "stats": {
+      "samples": "Samples",
+      "avgOffset": "Avg Offset",
+      "avgDelay": "Avg Delay",
+      "stdDev": "Std Dev",
+      "stability": "Stability",
+      "range": "Range",
+      "minOffset": "Min Offset",
+      "maxOffset": "Max Offset",
+      "cv": "CV",
+      "cvDesc": "Coefficient of Variation",
+      "skewness": "Skewness",
+      "skewnessDesc": "Distribution symmetry",
+      "kurtosis": "Kurtosis",
+      "kurtosisDesc": "Distribution peakedness"
+    },
+    "stability": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "normal": "Normal",
+      "poor": "Poor"
+    },
+    "charts": {
+      "offsetTrend": "Offset Trend",
+      "delayTrend": "Delay Trend",
+      "distribution": "Offset Distribution Histogram"
+    },
+    "table": {
+      "time": "Time",
+      "offset": "Offset",
+      "delay": "Delay",
+      "server": "Server"
+    }
   },
   "common": {
     "loading": "Loading...",
