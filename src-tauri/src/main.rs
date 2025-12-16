@@ -17,14 +17,29 @@ use tauri_plugin_updater::UpdaterExt;
 fn ensure_admin() {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
+    use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, HANDLE};
+    use windows_sys::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
     use windows_sys::Win32::UI::Shell::{ShellExecuteExW, SHELLEXECUTEINFOW, SEE_MASK_FLAG_NO_UI, SEE_MASK_NOCLOSEPROCESS};
 
-    let is_admin = std::process::Command::new("net")
-        .args(["session"])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let is_admin = unsafe {
+        let mut token: HANDLE = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            false
+        } else {
+            let mut elevation: TOKEN_ELEVATION = std::mem::zeroed();
+            let mut size: u32 = 0;
+            let result = GetTokenInformation(
+                token,
+                TokenElevation,
+                &mut elevation as *mut _ as *mut _,
+                std::mem::size_of::<TOKEN_ELEVATION>() as u32,
+                &mut size,
+            );
+            CloseHandle(token);
+            result != 0 && elevation.TokenIsElevated != 0
+        }
+    };
 
     if !is_admin {
         if let Ok(exe_path) = std::env::current_exe() {
