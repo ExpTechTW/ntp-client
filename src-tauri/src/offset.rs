@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::ntp;
