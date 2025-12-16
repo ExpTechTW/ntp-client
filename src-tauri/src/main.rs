@@ -183,7 +183,7 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 let _ = update(update_handle.clone()).await;
                 loop {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(300)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_secs(15 * 60)).await;
                     let _ = update(update_handle.clone()).await;
                 }
             });
