@@ -111,6 +111,21 @@ jobs:
           mv tauri.conf.json.tmp tauri.conf.json
           echo "=== Updated tauri.conf.json ==="
           cat tauri.conf.json
+          echo ""
+          echo "=== Verifying sidecar files exist ==="
+          echo "PWD: $(pwd)"
+          echo "Looking for: binaries/ntp-client-sidecar-*"
+          ls -la binaries/ || echo "binaries/ directory not found"
+          echo ""
+          echo "=== Checking expected paths ==="
+          for target in x86_64-apple-darwin aarch64-apple-darwin universal-apple-darwin; do
+            path="binaries/ntp-client-sidecar-$target"
+            if [ -f "$path" ]; then
+              echo "✓ EXISTS: $path ($(file "$path" | cut -d: -f2))"
+            else
+              echo "✗ MISSING: $path"
+            fi
+          done
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
