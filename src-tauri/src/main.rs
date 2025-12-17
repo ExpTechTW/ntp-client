@@ -119,6 +119,44 @@ fn main() {
     #[cfg(target_os = "windows")]
     ensure_admin();
 
+    // Windows: 監聽安裝程序的退出訊號
+    #[cfg(target_os = "windows")]
+    {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let should_exit = Arc::new(AtomicBool::new(false));
+        let should_exit_clone = should_exit.clone();
+
+        // 創建一個 Named Event，讓安裝程序可以 signal
+        std::thread::spawn(move || {
+            use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
+            use windows_sys::Win32::System::Threading::{CreateEventW, WaitForSingleObject, INFINITE};
+
+            let event_name: Vec<u16> = "Global\\NTPClientExitEvent\0".encode_utf16().collect();
+
+            unsafe {
+                let event = CreateEventW(
+                    std::ptr::null(),
+                    0,  // auto-reset
+                    0,  // initial state = non-signaled
+                    event_name.as_ptr(),
+                );
+
+                if !event.is_null() {
+                    // 等待事件被 signal
+                    if WaitForSingleObject(event, INFINITE) == WAIT_OBJECT_0 {
+                        println!("[APP] 收到安裝程序退出訊號");
+                        should_exit_clone.store(true, Ordering::SeqCst);
+                        // 強制退出程序
+                        std::process::exit(0);
+                    }
+                    CloseHandle(event);
+                }
+            }
+        });
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
