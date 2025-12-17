@@ -218,6 +218,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            // 只處理視窗關閉請求：隱藏到 tray 而不是退出程式
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let _ = window.hide();
                 api.prevent_close();
@@ -260,6 +261,20 @@ fn main() {
             user::stats::calculate_history_stats,
             user::stats::calculate_autocorr_data
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            // 程式退出訊號（如 NSIS 安裝程序的 kill）不會被 on_window_event 攔截
+            // 這裡不需要做任何處理，讓程式正常退出
+            if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
+                // code.is_some() 表示是程式主動退出（如 app.exit()）
+                // code.is_none() 表示是外部關閉訊號
+                if code.is_none() {
+                    // 外部關閉訊號，允許程式退出
+                    println!("[APP] 收到退出訊號，正在退出...");
+                }
+                // 不呼叫 api.prevent_exit()，讓程式正常退出
+                let _ = api;
+            }
+        });
 }
