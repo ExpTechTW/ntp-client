@@ -181,8 +181,7 @@ fn set_time_windows(unix_ms: f64) -> Result<String, SetTimeError> {
 
 #[cfg(target_os = "macos")]
 fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
-    let sidecar_binary_exists =
-        std::path::Path::new("/usr/local/bin/ntp-client-sidecar").exists();
+    let sidecar_binary_exists = std::path::Path::new("/usr/local/bin/ntp-client-sidecar").exists();
     let sidecar_plist_exists =
         std::path::Path::new("/Library/LaunchDaemons/com.exptech.ntp-client-sidecar.plist")
             .exists();
@@ -211,7 +210,6 @@ fn set_time_macos(unix_ms: f64) -> Result<String, SetTimeError> {
         }
     }
 }
-
 
 #[cfg(target_os = "linux")]
 fn set_time_linux(_unix_ms: f64) -> Result<String, SetTimeError> {
@@ -425,7 +423,9 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
 
     println!(
         "[SYNC] 中位數: offset={:.3}ms delay={:.3}ms (共{}次測量)",
-        median_offset, median_delay, offsets.len()
+        median_offset,
+        median_delay,
+        offsets.len()
     );
 
     fn do_sync(target_ms: f64, wait_until_local: f64) -> Result<(), SetTimeError> {
@@ -464,12 +464,12 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         .as_ref()
         .map(|e| e.code == "PERMISSION_DENIED")
         .unwrap_or(false);
-    
+
     let sidecar_not_installed = sync_error
         .as_ref()
         .map(|e| e.code == "SIDECAR_NOT_INSTALLED" || e.code == "SIDECAR_NOT_RUNNING")
         .unwrap_or(false);
-    
+
     if sidecar_not_installed {
         println!("[SYNC] Sidecar 未安裝或未運行，請手動安裝");
     }
@@ -483,7 +483,10 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         std::thread::sleep(std::time::Duration::from_millis(100));
         match ntp::query_ntp(&server) {
             Ok(r) => {
-                println!("[SYNC] 驗證: offset={:.3}ms delay={:.3}ms", r.offset, r.delay);
+                println!(
+                    "[SYNC] 驗證: offset={:.3}ms delay={:.3}ms",
+                    r.offset, r.delay
+                );
                 r.offset
             }
             Err(_) => 0.0,
@@ -504,7 +507,10 @@ pub async fn sync_ntp_time(server: String) -> Result<String, String> {
         message: if sync_error.is_none() {
             "同步完成 (5次測量中位數)".to_string()
         } else {
-            sync_error.as_ref().map(|e| e.error.clone()).unwrap_or_default()
+            sync_error
+                .as_ref()
+                .map(|e| e.error.clone())
+                .unwrap_or_default()
         },
         server: ntp_result.server,
         server_ip: ntp_result.server_ip,

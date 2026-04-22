@@ -117,20 +117,24 @@ pub fn query_ntp(server: &str) -> Result<NtpResult, NtpError> {
 
     let server_addr = format!("{}:{}", server, NTP_PORT);
 
-    let t1 = duration_to_unix_ms(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| NtpError {
-        success: false,
-        error: format!("系統時間錯誤: {}", e),
-        code: "TIME_ERROR".to_string(),
+    let t1 = duration_to_unix_ms(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| {
+        NtpError {
+            success: false,
+            error: format!("系統時間錯誤: {}", e),
+            code: "TIME_ERROR".to_string(),
+        }
     })?);
 
     let (t1_secs, t1_frac) = unix_ms_to_ntp(t1);
     write_ntp_timestamp(&mut ntp_packet, 40, t1_secs, t1_frac);
 
-    socket.send_to(&ntp_packet, &server_addr).map_err(|e| NtpError {
-        success: false,
-        error: format!("無法發送請求: {}", e),
-        code: "SEND_ERROR".to_string(),
-    })?;
+    socket
+        .send_to(&ntp_packet, &server_addr)
+        .map_err(|e| NtpError {
+            success: false,
+            error: format!("無法發送請求: {}", e),
+            code: "SEND_ERROR".to_string(),
+        })?;
 
     let mut response = [0u8; NTP_PACKET_SIZE];
     let (size, peer_addr) = socket.recv_from(&mut response).map_err(|e| NtpError {
@@ -139,10 +143,12 @@ pub fn query_ntp(server: &str) -> Result<NtpResult, NtpError> {
         code: "RECV_ERROR".to_string(),
     })?;
 
-    let t4 = duration_to_unix_ms(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| NtpError {
-        success: false,
-        error: format!("系統時間錯誤: {}", e),
-        code: "TIME_ERROR".to_string(),
+    let t4 = duration_to_unix_ms(SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| {
+        NtpError {
+            success: false,
+            error: format!("系統時間錯誤: {}", e),
+            code: "TIME_ERROR".to_string(),
+        }
     })?);
 
     if size < NTP_PACKET_SIZE {

@@ -5,7 +5,7 @@ pub async fn enable_autostart(app: AppHandle) -> Result<String, String> {
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
         use tauri_plugin_autostart::ManagerExt;
-        
+
         app.autolaunch()
             .enable()
             .map_err(|e| format!("啟用開機自啟動失敗: {}", e))?;
@@ -28,7 +28,7 @@ pub async fn disable_autostart(app: AppHandle) -> Result<String, String> {
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
         use tauri_plugin_autostart::ManagerExt;
-        
+
         app.autolaunch()
             .disable()
             .map_err(|e| format!("停用開機自啟動失敗: {}", e))?;
@@ -51,8 +51,9 @@ pub async fn is_autostart_enabled(app: AppHandle) -> Result<String, String> {
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
         use tauri_plugin_autostart::ManagerExt;
-        
-        let enabled = app.autolaunch()
+
+        let enabled = app
+            .autolaunch()
             .is_enabled()
             .map_err(|e| format!("查詢開機自啟動狀態失敗: {}", e))?;
 

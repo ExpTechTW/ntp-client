@@ -46,11 +46,11 @@ High-precision Network Time Synchronization Tool
 
 ### Supported Systems
 
-| Operating System | Version       | Architecture           | Notes                          |
-| ---------------- | ------------- | ---------------------- | ------------------------------ |
-| **macOS**        | 10.13+        | Intel / Apple Silicon  | Requires Sidecar Server        |
-| **Windows**      | 10+           | x64                    | Requires WebView2              |
-| **Linux**        | Ubuntu 22.04+ | x64                    | Requires GLib 2.70+, WebKitGTK 4.1 |
+| Operating System | Version       | Architecture          | Notes                              |
+| ---------------- | ------------- | --------------------- | ---------------------------------- |
+| **macOS**        | 10.13+        | Intel / Apple Silicon | Requires Sidecar Server            |
+| **Windows**      | 10+           | x64                   | Requires WebView2                  |
+| **Linux**        | Ubuntu 22.04+ | x64                   | Requires GLib 2.70+, WebKitGTK 4.1 |
 
 ### macOS Installation
 
@@ -77,13 +77,13 @@ Time synchronization requires `pkexec` to elevate privileges.
 
 ### Time Status
 
-| Status      | Offset    | Description              |
-| ----------- | --------- | ------------------------ |
-| **Excellent** | < 10ms  | Highly accurate time     |
-| **Good**    | < 50ms  | Accurate time            |
-| **Normal**  | < 100ms | Acceptable time          |
-| **Drift**   | < 500ms | Noticeable offset        |
-| **Abnormal** | ≥ 500ms | Excessive offset        |
+| Status        | Offset  | Description          |
+| ------------- | ------- | -------------------- |
+| **Excellent** | < 10ms  | Highly accurate time |
+| **Good**      | < 50ms  | Accurate time        |
+| **Normal**    | < 100ms | Acceptable time      |
+| **Drift**     | < 500ms | Noticeable offset    |
+| **Abnormal**  | ≥ 500ms | Excessive offset     |
 
 ### Information Tab
 
@@ -116,4 +116,3 @@ Time synchronization requires `pkexec` to elevate privileges.
 **[ExpTech](https://github.com/ExpTechTW)**
 
 </div>
-

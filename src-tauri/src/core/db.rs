@@ -156,7 +156,8 @@ pub fn query_records(filter: &QueryFilter) -> SqliteResult<Vec<NtpRecord>> {
     let guard = get_connection()?;
     let conn = guard.as_ref().unwrap();
 
-    let mut sql = String::from("SELECT id, offset, delay, server, timestamp FROM ntp_records WHERE 1=1");
+    let mut sql =
+        String::from("SELECT id, offset, delay, server, timestamp FROM ntp_records WHERE 1=1");
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
     if let Some(start) = filter.start_time {
@@ -291,11 +292,15 @@ pub fn get_db_stats() -> SqliteResult<DbStats> {
     let total: usize = conn.query_row("SELECT COUNT(*) FROM ntp_records", [], |row| row.get(0))?;
 
     let earliest: Option<i64> = conn
-        .query_row("SELECT MIN(timestamp) FROM ntp_records", [], |row| row.get(0))
+        .query_row("SELECT MIN(timestamp) FROM ntp_records", [], |row| {
+            row.get(0)
+        })
         .ok();
 
     let latest: Option<i64> = conn
-        .query_row("SELECT MAX(timestamp) FROM ntp_records", [], |row| row.get(0))
+        .query_row("SELECT MAX(timestamp) FROM ntp_records", [], |row| {
+            row.get(0)
+        })
         .ok();
 
     let mut stmt = conn.prepare("SELECT DISTINCT server FROM ntp_records")?;
@@ -374,13 +379,13 @@ fn compress_batch(batch: &CompressedBatch) -> SqliteResult<Vec<u8>> {
     })?;
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&serialized).map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })?;
+    encoder
+        .write_all(&serialized)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
-    encoder.finish().map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })
+    encoder
+        .finish()
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
 }
 
 fn decompress_batch(data: &[u8]) -> SqliteResult<CompressedBatch> {
@@ -391,10 +396,14 @@ fn decompress_batch(data: &[u8]) -> SqliteResult<CompressedBatch> {
     })?;
 
     bincode::deserialize(&decompressed).map_err(|e| {
-        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Blob, Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string(),
-        )))
+        rusqlite::Error::FromSqlConversionFailure(
+            0,
+            rusqlite::types::Type::Blob,
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            )),
+        )
     })
 }
 
@@ -537,7 +546,12 @@ pub async fn db_init() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn db_insert_record(offset: f64, delay: f64, server: String, timestamp: i64) -> Result<i64, String> {
+pub async fn db_insert_record(
+    offset: f64,
+    delay: f64,
+    server: String,
+    timestamp: i64,
+) -> Result<i64, String> {
     let record = NtpRecord {
         id: None,
         offset,
@@ -564,12 +578,18 @@ pub async fn db_query_range(start: i64, end: i64) -> Result<Vec<NtpRecord>, Stri
 }
 
 #[tauri::command]
-pub async fn db_query_by_server(server: String, limit: Option<usize>) -> Result<Vec<NtpRecord>, String> {
+pub async fn db_query_by_server(
+    server: String,
+    limit: Option<usize>,
+) -> Result<Vec<NtpRecord>, String> {
     query_by_server(&server, limit).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn db_query_outliers(threshold: f64, limit: Option<usize>) -> Result<Vec<NtpRecord>, String> {
+pub async fn db_query_outliers(
+    threshold: f64,
+    limit: Option<usize>,
+) -> Result<Vec<NtpRecord>, String> {
     query_outliers(threshold, limit).map_err(|e| e.to_string())
 }
 
@@ -632,11 +652,17 @@ pub async fn db_optimize() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn db_aggregate_hourly(start: i64, end: i64) -> Result<Vec<(i64, f64, f64, usize)>, String> {
+pub async fn db_aggregate_hourly(
+    start: i64,
+    end: i64,
+) -> Result<Vec<(i64, f64, f64, usize)>, String> {
     aggregate_by_hour(start, end).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn db_aggregate_daily(start: i64, end: i64) -> Result<Vec<(i64, f64, f64, usize)>, String> {
+pub async fn db_aggregate_daily(
+    start: i64,
+    end: i64,
+) -> Result<Vec<(i64, f64, f64, usize)>, String> {
     aggregate_by_day(start, end).map_err(|e| e.to_string())
 }

@@ -18,9 +18,13 @@ fn ensure_admin() {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, HANDLE};
-    use windows_sys::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+    use windows_sys::Win32::Security::{
+        GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY,
+    };
     use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
-    use windows_sys::Win32::UI::Shell::{ShellExecuteExW, SHELLEXECUTEINFOW, SEE_MASK_FLAG_NO_UI, SEE_MASK_NOCLOSEPROCESS};
+    use windows_sys::Win32::UI::Shell::{
+        ShellExecuteExW, SEE_MASK_FLAG_NO_UI, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
+    };
 
     let is_admin = unsafe {
         let mut token: HANDLE = std::ptr::null_mut();
@@ -122,8 +126,8 @@ fn main() {
     // Windows: 監聽安裝程序的退出訊號
     #[cfg(target_os = "windows")]
     {
-        use std::sync::Arc;
         use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
 
         let should_exit = Arc::new(AtomicBool::new(false));
         let should_exit_clone = should_exit.clone();
@@ -131,15 +135,17 @@ fn main() {
         // 創建一個 Named Event，讓安裝程序可以 signal
         std::thread::spawn(move || {
             use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
-            use windows_sys::Win32::System::Threading::{CreateEventW, WaitForSingleObject, INFINITE};
+            use windows_sys::Win32::System::Threading::{
+                CreateEventW, WaitForSingleObject, INFINITE,
+            };
 
             let event_name: Vec<u16> = "Global\\NTPClientExitEvent\0".encode_utf16().collect();
 
             unsafe {
                 let event = CreateEventW(
                     std::ptr::null(),
-                    0,  // auto-reset
-                    0,  // initial state = non-signaled
+                    0, // auto-reset
+                    0, // initial state = non-signaled
                     event_name.as_ptr(),
                 );
 

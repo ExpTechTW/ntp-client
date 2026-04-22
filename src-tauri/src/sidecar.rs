@@ -91,8 +91,7 @@ fn test_sidecar_connection() -> bool {
 pub async fn install_sidecar() -> Result<String, String> {
     println!("[SIDECAR] 開始安裝 sidecar...");
 
-    let exe_path =
-        std::env::current_exe().map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
+    let exe_path = std::env::current_exe().map_err(|e| format!("無法取得執行檔路徑: {}", e))?;
     println!("[SIDECAR] 執行檔路徑: {}", exe_path.to_string_lossy());
 
     // Tauri bundle.resources 會將 resources/ 目錄複製到 Contents/Resources/resources/
@@ -102,7 +101,10 @@ pub async fn install_sidecar() -> Result<String, String> {
         .map(|p| p.join("Resources/resources/ntp-client-sidecar"))
         .ok_or_else(|| "無法取得 app bundle 路徑".to_string())?;
 
-    println!("[SIDECAR] 預期 sidecar 路徑: {}", sidecar_path.to_string_lossy());
+    println!(
+        "[SIDECAR] 預期 sidecar 路徑: {}",
+        sidecar_path.to_string_lossy()
+    );
 
     if !sidecar_path.exists() {
         let err = format!("找不到 sidecar: {}", sidecar_path.to_string_lossy());
@@ -194,8 +196,7 @@ fi
     );
 
     let temp_script = "/tmp/install-sidecar.sh";
-    std::fs::write(temp_script, install_script)
-        .map_err(|e| format!("無法寫入臨時腳本: {}", e))?;
+    std::fs::write(temp_script, install_script).map_err(|e| format!("無法寫入臨時腳本: {}", e))?;
 
     let script = format!(
         r#"do shell script "bash '{}'" with administrator privileges"#,
@@ -229,10 +230,7 @@ fi
             println!("[SIDECAR] UDP 連接測試成功 (嘗試 {}/3)", attempt);
             break;
         }
-        println!(
-            "[SIDECAR] UDP 連接測試失敗，重試中... (嘗試 {}/3)",
-            attempt
-        );
+        println!("[SIDECAR] UDP 連接測試失敗，重試中... (嘗試 {}/3)", attempt);
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
@@ -308,8 +306,7 @@ echo "卸載完成"
 #[cfg(target_os = "macos")]
 pub fn set_time_via_sidecar(unix_ms: f64) -> Result<String, String> {
     let request = SetTimeRequest { unix_ms };
-    let request_json =
-        serde_json::to_string(&request).map_err(|e| format!("序列化失敗: {}", e))?;
+    let request_json = serde_json::to_string(&request).map_err(|e| format!("序列化失敗: {}", e))?;
 
     let socket =
         UdpSocket::bind("127.0.0.1:0").map_err(|e| format!("無法綁定 UDP socket: {}", e))?;
