@@ -451,58 +451,31 @@ export default function HomePage() {
                 fontSize: "clamp(2rem, min(13vw, 28vh), 12rem)",
               }}
             >
-              <Digit
-                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                {hh[0]}
-              </Digit>
-              <Digit
-                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                {hh[1]}
-              </Digit>
-              <span className={isDark ? "text-white" : "text-zinc-900"}>:</span>
-              <Digit
-                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                {mm[0]}
-              </Digit>
-              <Digit
-                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                {mm[1]}
-              </Digit>
-              <span className={isDark ? "text-white" : "text-zinc-900"}>:</span>
-              <Digit
-                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                {ss[0]}
-              </Digit>
-              <Digit
-                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                {ss[1]}
-              </Digit>
-              <span
-                className={`${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-                style={{ fontSize: "0.4em" }}
-              >
+              <Digit className="nixie-digit w-[1.2ch]">{hh[0]}</Digit>
+              <Digit className="nixie-digit w-[1.2ch]">{hh[1]}</Digit>
+              <span className="nixie-digit nixie-colon">:</span>
+              <Digit className="nixie-digit w-[1.2ch]">{mm[0]}</Digit>
+              <Digit className="nixie-digit w-[1.2ch]">{mm[1]}</Digit>
+              <span className="nixie-digit nixie-colon">:</span>
+              <Digit className="nixie-digit w-[1.2ch]">{ss[0]}</Digit>
+              <Digit className="nixie-digit w-[1.2ch]">{ss[1]}</Digit>
+              <span className="nixie-digit-dim" style={{ fontSize: "0.4em" }}>
                 .
               </span>
               <Digit
-                className={`w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className="nixie-digit-dim w-[1ch]"
                 style={{ fontSize: "0.4em" }}
               >
                 {ms[0]}
               </Digit>
               <Digit
-                className={`w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className="nixie-digit-dim w-[1ch]"
                 style={{ fontSize: "0.4em" }}
               >
                 {ms[1]}
               </Digit>
               <Digit
-                className={`w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className="nixie-digit-dim w-[1ch]"
                 style={{ fontSize: "0.4em" }}
               >
                 {ms[2]}

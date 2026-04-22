@@ -435,3 +435,63 @@ body {
     -webkit-backdrop-filter: none !important;
   }
 }
+
+/* Nixie tube digit effect — warm orange glow, slight flicker.
+ * Uses multi-layer text-shadow for the ionised-gas halo and a subtle
+ * keyframe animation to mimic the unstable filament brightness.
+ */
+.nixie-digit {
+  color: #ffb27a;
+  text-shadow:
+    0 0 2px #ffd7a8,
+    0 0 6px #ff8a3c,
+    0 0 14px #ff6a1a,
+    0 0 28px rgba(255, 106, 26, 0.75),
+    0 0 52px rgba(255, 78, 0, 0.45);
+  animation: nixie-flicker 4.2s infinite;
+  will-change: opacity, text-shadow;
+}
+
+.nixie-digit-dim {
+  color: #ffa365;
+  text-shadow:
+    0 0 2px #ffc78f,
+    0 0 5px #ff7a2a,
+    0 0 10px rgba(255, 96, 20, 0.6);
+  opacity: 0.85;
+}
+
+@keyframes nixie-flicker {
+  0%,
+  18%,
+  22%,
+  60%,
+  64%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.92;
+  }
+  62% {
+    opacity: 0.88;
+  }
+  80% {
+    opacity: 0.96;
+  }
+}
+
+.nixie-colon {
+  animation: nixie-colon-blink 2s steps(1, end) infinite;
+}
+
+@keyframes nixie-colon-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0.15;
+  }
+}
