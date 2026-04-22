@@ -1,6 +1,6 @@
 {
   "productName": "NTP Client",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-rc.1",
   "identifier": "com.exptech.ntp-client",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -11,7 +11,11 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": ["nsis", "app", "appimage"],
+    "targets": [
+      "nsis",
+      "app",
+      "appimage"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -24,7 +28,11 @@
       "minimumSystemVersion": "10.13",
       "entitlements": "./Entitlements.plist"
     },
-    "linux": { "appimage": { "bundleMediaFramework": false } },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
@@ -52,15 +60,33 @@
     ],
     "security": {
       "csp": {
-        "default-src": ["'self'", "ipc:", "http://ipc.localhost"],
-        "img-src": ["'self'", "asset:", "http://asset.localhost", "data:"],
-        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        "style-src": ["'self'", "'unsafe-inline'"]
+        "default-src": [
+          "'self'",
+          "ipc:",
+          "http://ipc.localhost"
+        ],
+        "img-src": [
+          "'self'",
+          "asset:",
+          "http://asset.localhost",
+          "data:"
+        ],
+        "script-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'"
+        ],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'"
+        ]
       },
       "capabilities": [
         {
           "identifier": "main",
-          "windows": ["*"],
+          "windows": [
+            "*"
+          ],
           "permissions": [
             "core:default",
             "core:window:allow-show",
@@ -81,7 +107,9 @@
       "endpoints": [
         "https://github.com/ExpTechTW/ntp-client/releases/latest/download/latest.json"
       ],
-      "windows": { "installMode": "passive" }
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
