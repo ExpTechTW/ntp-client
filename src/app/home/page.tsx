@@ -25,8 +25,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import "@/i18n";
+import BgSakuraFubuki from "@/components/BgSakuraFubuki";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useHistory } from "@/contexts/HistoryContext";
+import { useTheme } from "@/hooks/useTheme";
 
 interface NtpResult {
   success: boolean;
@@ -113,7 +115,7 @@ const Info = ({
   isDark?: boolean;
 }) => (
   <div
-    className={`rounded px-1.5 py-0.5 ${isDark ? "bg-zinc-800/40" : "bg-zinc-200/60"}`}
+    className={`glass-subpanel px-1.5 py-0.5 ${isDark ? "" : "light-glass-sub"}`}
   >
     <p
       className={`text-[9px] leading-none ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
@@ -139,6 +141,7 @@ export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { addEntry } = useHistory();
+  const { isDark, setIsDark, toggleTheme } = useTheme();
   const [server, setServer] = useState("time.exptech.com.tw");
   const [isQuerying, setIsQuerying] = useState(false);
   const [result, setResult] = useState<NtpResult | null>(null);
@@ -147,23 +150,29 @@ export default function HomePage() {
   const [tab, setTab] = useState<TabId>("time");
   const [isCompact, setIsCompact] = useState(false);
   const [version, setVersion] = useState("");
-  const [isDark, setIsDark] = useState(true);
   const [permissionError, setPermissionError] = useState(false);
   const [sidecarNotInstalled, setSidecarNotInstalled] = useState(false);
   const [isInstallingSidecar, setIsInstallingSidecar] = useState(false);
   const [autostartEnabled, setAutostartEnabled] = useState(false);
   const [isTogglingAutostart, setIsTogglingAutostart] = useState(false);
+  const [sakuraPhase, setSakuraPhase] = useState<"off" | "emit" | "fade">(
+    "off",
+  );
+  const [sakuraRun, setSakuraRun] = useState(0);
   const refs = useRef<{
     time?: NodeJS.Timeout;
     sync?: NodeJS.Timeout;
     cd?: NodeJS.Timeout;
+    sakura?: NodeJS.Timeout;
     syncing?: boolean;
   }>({});
 
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    localStorage.setItem("theme", newTheme ? "dark" : "light");
+  const triggerSakuraBurst = () => {
+    if (Math.random() >= 0.25) return;
+    if (refs.current.sakura) clearTimeout(refs.current.sakura);
+    setSakuraRun((n) => n + 1);
+    setSakuraPhase("emit");
+    refs.current.sakura = setTimeout(() => setSakuraPhase("fade"), 60000);
   };
 
   const query = async (srv: string) => {
@@ -230,6 +239,7 @@ export default function HomePage() {
       setIsQuerying(false);
       refs.current.syncing = false;
       setCountdown(60);
+      triggerSakuraBurst();
     }
   };
 
@@ -314,10 +324,6 @@ export default function HomePage() {
     getVersion()
       .then((v) => setVersion(`v${v}`))
       .catch(() => {});
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) {
-      setIsDark(savedTheme === "dark");
-    }
     checkAutostartStatus();
 
     const checkSize = () => setIsCompact(window.innerHeight < 300);
@@ -325,6 +331,7 @@ export default function HomePage() {
     window.addEventListener("resize", checkSize);
     return () => {
       clearInterval(refs.current.time);
+      if (refs.current.sakura) clearTimeout(refs.current.sakura);
       window.removeEventListener("resize", checkSize);
     };
   }, []);
@@ -412,83 +419,99 @@ export default function HomePage() {
   if (isCompact) {
     return (
       <div
-        className={`h-screen flex items-center justify-center select-none overflow-hidden ${isDark ? "bg-zinc-950" : "bg-zinc-100"}`}
+        className={`glass-page relative h-screen flex items-center justify-center select-none overflow-hidden ${
+          isDark ? "text-white" : "text-zinc-900"
+        }`}
       >
-        <div className="text-center">
-          <div className="flex items-baseline justify-center font-mono">
-            <Digit
-              className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              {hh[0]}
-            </Digit>
-            <Digit
-              className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              {hh[1]}
-            </Digit>
-            <span
-              className={`text-3xl font-bold ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              :
-            </span>
-            <Digit
-              className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              {mm[0]}
-            </Digit>
-            <Digit
-              className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              {mm[1]}
-            </Digit>
-            <span
-              className={`text-3xl font-bold ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              :
-            </span>
-            <Digit
-              className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              {ss[0]}
-            </Digit>
-            <Digit
-              className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
-            >
-              {ss[1]}
-            </Digit>
-            <span
-              className={`text-base ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-            >
-              .
-            </span>
-            <Digit
-              className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-            >
-              {ms[0]}
-            </Digit>
-            <Digit
-              className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-            >
-              {ms[1]}
-            </Digit>
-            <Digit
-              className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-            >
-              {ms[2]}
-            </Digit>
-          </div>
-          <p
-            className={`text-xs mt-1 ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
-            suppressHydrationWarning
-          >
-            {dateStr}
-          </p>
-          {status && (
-            <p className={`text-[9px] font-mono ${status.color}`}>
-              {result!.offset >= 0 ? "+" : ""}
-              {fmtS(result!.offset)}
-            </p>
+        <div
+          className={`glass-panel relative z-10 overflow-hidden px-5 py-3 text-center ${isDark ? "" : "light-glass"}`}
+        >
+          {sakuraPhase !== "off" && (
+            <BgSakuraFubuki
+              key={sakuraRun}
+              className="z-20"
+              capacity={100}
+              particleSize={{ width: 1.05, height: 1.5 }}
+              emit={sakuraPhase === "emit"}
+              onComplete={() => setSakuraPhase("off")}
+            />
           )}
+          <div className="relative z-30">
+            <div className="flex items-baseline justify-center font-mono">
+              <Digit
+                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                {hh[0]}
+              </Digit>
+              <Digit
+                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                {hh[1]}
+              </Digit>
+              <span
+                className={`text-3xl font-bold ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                :
+              </span>
+              <Digit
+                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                {mm[0]}
+              </Digit>
+              <Digit
+                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                {mm[1]}
+              </Digit>
+              <span
+                className={`text-3xl font-bold ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                :
+              </span>
+              <Digit
+                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                {ss[0]}
+              </Digit>
+              <Digit
+                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+              >
+                {ss[1]}
+              </Digit>
+              <span
+                className={`text-base ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+              >
+                .
+              </span>
+              <Digit
+                className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+              >
+                {ms[0]}
+              </Digit>
+              <Digit
+                className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+              >
+                {ms[1]}
+              </Digit>
+              <Digit
+                className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+              >
+                {ms[2]}
+              </Digit>
+            </div>
+            <p
+              className={`text-xs mt-1 ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
+              suppressHydrationWarning
+            >
+              {dateStr}
+            </p>
+            {status && (
+              <p className={`text-[9px] font-mono ${status.color}`}>
+                {result!.offset >= 0 ? "+" : ""}
+                {fmtS(result!.offset)}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -496,144 +519,168 @@ export default function HomePage() {
 
   return (
     <div
-      className={`h-screen select-none overflow-hidden flex flex-col ${isDark ? "bg-zinc-950 text-white" : "bg-zinc-100 text-zinc-900"}`}
+      className={`glass-page relative h-screen select-none overflow-hidden flex flex-col p-2 gap-2 ${
+        isDark ? "text-white" : "text-zinc-900"
+      }`}
     >
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 py-2">
-        <div className="flex items-baseline justify-center font-mono">
-          <Digit
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
-          >
-            {hh[0]}
-          </Digit>
-          <Digit
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
-          >
-            {hh[1]}
-          </Digit>
-          <span
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold ${isDark ? "" : "text-zinc-900"}`}
-          >
-            :
-          </span>
-          <Digit
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
-          >
-            {mm[0]}
-          </Digit>
-          <Digit
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
-          >
-            {mm[1]}
-          </Digit>
-          <span
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold ${isDark ? "" : "text-zinc-900"}`}
-          >
-            :
-          </span>
-          <Digit
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
-          >
-            {ss[0]}
-          </Digit>
-          <Digit
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
-          >
-            {ss[1]}
-          </Digit>
-          <span
-            className={`text-2xl sm:text-3xl ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-          >
-            .
-          </span>
-          <Digit
-            className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-          >
-            {ms[0]}
-          </Digit>
-          <Digit
-            className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-          >
-            {ms[1]}
-          </Digit>
-          <Digit
-            className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
-          >
-            {ms[2]}
-          </Digit>
-        </div>
-        <p
-          className={`text-sm mt-1 ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
-          suppressHydrationWarning
-        >
-          {dateStr}
-        </p>
-        {result && status && (
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`text-xs ${status.color}`}>{status.label}</span>
-            <span
-              className={`text-sm font-mono ${status.color}`}
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              {result.offset >= 0 ? "+" : ""}
-              {fmtS(result.offset)}
-            </span>
-          </div>
+      <div
+        className={`glass-panel relative z-30 overflow-hidden flex-1 flex flex-col items-center justify-center min-h-0 py-2 ${
+          isDark ? "" : "light-glass"
+        }`}
+      >
+        {sakuraPhase !== "off" && (
+          <BgSakuraFubuki
+            key={sakuraRun}
+            className="z-20"
+            capacity={100}
+            particleSize={{ width: 1.05, height: 1.5 }}
+            emit={sakuraPhase === "emit"}
+            onComplete={() => setSakuraPhase("off")}
+          />
         )}
-        {permissionError && (
-          <div className="flex flex-col items-center gap-1 mt-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-yellow-500/20 border border-yellow-500/50">
-              <AlertTriangle className="w-4 h-4 text-yellow-500" />
-              <span className="text-xs text-yellow-500">
-                {t("home.permissionError")}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-yellow-500/80">
-              <span className="text-[10px]">{t("home.systemTime")}:</span>
+        <div className="relative z-30 flex flex-col items-center">
+          <div className="flex items-baseline justify-center font-mono">
+            <Digit
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
+            >
+              {hh[0]}
+            </Digit>
+            <Digit
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
+            >
+              {hh[1]}
+            </Digit>
+            <span
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold ${isDark ? "" : "text-zinc-900"}`}
+            >
+              :
+            </span>
+            <Digit
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
+            >
+              {mm[0]}
+            </Digit>
+            <Digit
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
+            >
+              {mm[1]}
+            </Digit>
+            <span
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold ${isDark ? "" : "text-zinc-900"}`}
+            >
+              :
+            </span>
+            <Digit
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
+            >
+              {ss[0]}
+            </Digit>
+            <Digit
+              className={`text-6xl sm:text-7xl md:text-8xl font-bold w-[1.2ch] ${isDark ? "" : "text-zinc-900"}`}
+            >
+              {ss[1]}
+            </Digit>
+            <span
+              className={`text-2xl sm:text-3xl ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+            >
+              .
+            </span>
+            <Digit
+              className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+            >
+              {ms[0]}
+            </Digit>
+            <Digit
+              className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+            >
+              {ms[1]}
+            </Digit>
+            <Digit
+              className={`text-2xl sm:text-3xl w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+            >
+              {ms[2]}
+            </Digit>
+          </div>
+          <p
+            className={`text-sm mt-1 ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
+            suppressHydrationWarning
+          >
+            {dateStr}
+          </p>
+          {result && status && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-xs ${status.color}`}>{status.label}</span>
               <span
-                className="text-xs font-mono"
+                className={`text-sm font-mono ${status.color}`}
                 style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                {sysHh}:{sysMm}:{sysSs}.{sysMs}
+                {result.offset >= 0 ? "+" : ""}
+                {fmtS(result.offset)}
               </span>
             </div>
-          </div>
-        )}
-        {sidecarNotInstalled && (
-          <div className="flex flex-col items-center gap-2 mt-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-yellow-500/20 border border-yellow-500/50">
-              <AlertTriangle className="w-4 h-4 text-yellow-500" />
-              <span className="text-xs text-yellow-500">
-                {t("home.sidecar.installRequired")}
-              </span>
+          )}
+          {permissionError && (
+            <div className="flex flex-col items-center gap-1 mt-2">
+              <div className="glass-chip flex items-center gap-1.5 px-3 py-1.5 rounded border-yellow-500/50 bg-yellow-500/15">
+                <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                <span className="text-xs text-yellow-500">
+                  {t("home.permissionError")}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-yellow-500/80">
+                <span className="text-[10px]">{t("home.systemTime")}:</span>
+                <span
+                  className="text-xs font-mono"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {sysHh}:{sysMm}:{sysSs}.{sysMs}
+                </span>
+              </div>
             </div>
-            <button
-              onClick={installSidecar}
-              disabled={isInstallingSidecar}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white transition-colors ${
-                isInstallingSidecar
-                  ? "bg-zinc-600 cursor-not-allowed"
-                  : "bg-yellow-500 hover:bg-yellow-600"
-              }`}
-            >
-              {isInstallingSidecar ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>{t("home.sidecar.installing")}</span>
-                </>
-              ) : (
-                <>
-                  <Package className="w-3.5 h-3.5" />
-                  <span>{t("home.sidecar.installButton")}</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
+          )}
+          {sidecarNotInstalled && (
+            <div className="flex flex-col items-center gap-2 mt-2">
+              <div className="glass-chip flex items-center gap-1.5 px-3 py-1.5 rounded border-yellow-500/50 bg-yellow-500/15">
+                <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                <span className="text-xs text-yellow-500">
+                  {t("home.sidecar.installRequired")}
+                </span>
+              </div>
+              <button
+                onClick={installSidecar}
+                disabled={isInstallingSidecar}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white transition-colors ${
+                  isInstallingSidecar
+                    ? "bg-zinc-600 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                {isInstallingSidecar ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>{t("home.sidecar.installing")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Package className="w-3.5 h-3.5" />
+                    <span>{t("home.sidecar.installButton")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="shrink-0 px-2 pb-2 space-y-1.5">
+      <div
+        className={`glass-panel relative z-30 shrink-0 px-2 py-2 space-y-1.5 ${
+          isDark ? "" : "light-glass"
+        }`}
+      >
         <div
-          className={`flex items-center gap-1.5 rounded px-2 py-1 border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-300"}`}
+          className={`glass-subpanel flex items-center gap-1.5 rounded px-2 py-1 ${
+            isDark ? "" : "light-glass-sub"
+          }`}
         >
           <Globe
             className={`w-3 h-3 ${isDark ? "text-zinc-600" : "text-zinc-400"}`}
@@ -674,7 +721,7 @@ export default function HomePage() {
         </div>
 
         <div
-          className={`rounded border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-300"}`}
+          className={`glass-subpanel rounded ${isDark ? "" : "light-glass-sub"}`}
         >
           {result ? (
             <>

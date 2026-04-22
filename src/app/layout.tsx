@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-TW" suppressHydrationWarning>
-      <body className="bg-zinc-950">
+      <body className="antialiased">
         <HistoryProvider>{children}</HistoryProvider>
       </body>
     </html>

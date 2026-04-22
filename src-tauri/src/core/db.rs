@@ -289,7 +289,7 @@ pub fn get_db_stats() -> SqliteResult<DbStats> {
     let guard = get_connection()?;
     let conn = guard.as_ref().unwrap();
 
-    let total: usize = conn.query_row("SELECT COUNT(*) FROM ntp_records", [], |row| row.get(0))?;
+    let total: i64 = conn.query_row("SELECT COUNT(*) FROM ntp_records", [], |row| row.get(0))?;
 
     let earliest: Option<i64> = conn
         .query_row("SELECT MIN(timestamp) FROM ntp_records", [], |row| {
@@ -313,7 +313,7 @@ pub fn get_db_stats() -> SqliteResult<DbStats> {
     let db_size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
 
     Ok(DbStats {
-        total_records: total,
+        total_records: total.max(0) as usize,
         earliest_timestamp: earliest,
         latest_timestamp: latest,
         servers,
@@ -371,7 +371,7 @@ pub fn archive_old_records(before_timestamp: i64) -> SqliteResult<usize> {
 }
 
 fn compress_batch(batch: &CompressedBatch) -> SqliteResult<Vec<u8>> {
-    let serialized = bincode::serialize(batch).map_err(|e| {
+    let serialized = serde_json::to_vec(batch).map_err(|e| {
         rusqlite::Error::ToSqlConversionFailure(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             e.to_string(),
@@ -395,16 +395,15 @@ fn decompress_batch(data: &[u8]) -> SqliteResult<CompressedBatch> {
         rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Blob, Box::new(e))
     })?;
 
-    bincode::deserialize(&decompressed).map_err(|e| {
+    let batch: CompressedBatch = serde_json::from_slice(&decompressed).map_err(|e| {
         rusqlite::Error::FromSqlConversionFailure(
             0,
             rusqlite::types::Type::Blob,
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            )),
+            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())),
         )
-    })
+    })?;
+
+    Ok(batch)
 }
 
 pub fn query_archived_records(start: i64, end: i64) -> SqliteResult<Vec<NtpRecord>> {
@@ -492,11 +491,12 @@ pub fn aggregate_by_hour(start: i64, end: i64) -> SqliteResult<Vec<(i64, f64, f6
     )?;
 
     let rows = stmt.query_map(params![start, end], |row| {
+        let count: i64 = row.get(3)?;
         Ok((
             row.get::<_, i64>(0)?,
             row.get::<_, f64>(1)?,
             row.get::<_, f64>(2)?,
-            row.get::<_, usize>(3)?,
+            count.max(0) as usize,
         ))
     })?;
 
@@ -524,11 +524,12 @@ pub fn aggregate_by_day(start: i64, end: i64) -> SqliteResult<Vec<(i64, f64, f64
     )?;
 
     let rows = stmt.query_map(params![start, end], |row| {
+        let count: i64 = row.get(3)?;
         Ok((
             row.get::<_, i64>(0)?,
             row.get::<_, f64>(1)?,
             row.get::<_, f64>(2)?,
-            row.get::<_, usize>(3)?,
+            count.max(0) as usize,
         ))
     })?;
 

@@ -63,6 +63,14 @@
   --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+  --glass-border: rgba(255, 255, 255, 0.66);
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-sub-bg: rgba(255, 255, 255, 0.46);
+  --glass-chip-bg: rgba(255, 255, 255, 0.42);
+  --glass-shadow:
+    0 14px 28px rgba(31, 38, 135, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --glass-page-primary: color-mix(in oklab, var(--primary) 56%, white);
+  --glass-page-secondary: color-mix(in oklab, var(--chart-2) 52%, white);
 }
 
 .dark {
@@ -126,6 +134,14 @@
     0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
     0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
   --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-bg: rgba(12, 14, 22, 0.52);
+  --glass-sub-bg: rgba(12, 14, 22, 0.38);
+  --glass-chip-bg: rgba(12, 14, 22, 0.34);
+  --glass-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --glass-page-primary: color-mix(in oklab, var(--primary) 75%, white);
+  --glass-page-secondary: color-mix(in oklab, var(--chart-2) 72%, white);
 }
 
 @theme inline {
@@ -274,5 +290,148 @@ progress[value]::-moz-progress-bar {
 
   to {
     transform: rotate(270deg);
+  }
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      color-mix(in oklab, var(--primary) 28%, transparent) 0%,
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 80% 10%,
+      color-mix(in oklab, var(--chart-2) 20%, transparent) 0%,
+      transparent 36%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--background) 92%, white) 0%,
+      color-mix(in oklab, var(--background) 86%, var(--accent)) 100%
+    );
+  color: var(--foreground);
+}
+
+@supports (color: light-dark(white, black)) {
+  body {
+    color: light-dark(
+      oklch(0.1884 0.0128 248.5103),
+      oklch(0.9328 0.0025 228.7857)
+    );
+  }
+}
+
+.glass-page {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.glass-page::before,
+.glass-page::after {
+  content: "";
+  position: absolute;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 9999px;
+  filter: blur(58px);
+  opacity: 0.24;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glass-page::before {
+  background: var(--glass-page-primary);
+  top: -6rem;
+  left: -5rem;
+}
+
+.glass-page::after {
+  background: var(--glass-page-secondary);
+  bottom: -9rem;
+  right: -4rem;
+}
+
+.glass-panel {
+  border-radius: 1rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
+
+.glass-subpanel {
+  border-radius: 0.75rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-sub-bg);
+  transform: translateZ(0);
+}
+
+.glass-chip {
+  border-radius: 0.6rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-chip-bg);
+  transform: translateZ(0);
+}
+
+.light-glass {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 16px 34px rgba(31, 38, 135, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.light-glass-sub {
+  border-color: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.history-glass > section {
+  border-radius: 1rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-sub-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 0.55rem;
+}
+
+.history-glass-light > section {
+  border-color: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow:
+    0 10px 24px rgba(31, 38, 135, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+@supports (
+  (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))
+) {
+  .glass-panel {
+    backdrop-filter: blur(16px) saturate(145%);
+    -webkit-backdrop-filter: blur(16px) saturate(145%);
+  }
+
+  .glass-subpanel,
+  .history-glass > section {
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  .glass-chip {
+    backdrop-filter: blur(10px) saturate(135%);
+    -webkit-backdrop-filter: blur(10px) saturate(135%);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel,
+  .glass-subpanel,
+  .glass-chip,
+  .history-glass > section {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }

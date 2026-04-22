@@ -43,6 +43,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import "@/i18n";
 import { invoke } from "@tauri-apps/api/core";
+import { useTheme } from "@/hooks/useTheme";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -301,9 +302,26 @@ interface StatsResult {
   prediction_interval_upper: number;
 }
 
-const fmtMs = (ms: number) => `${ms.toFixed(2)}ms`;
-const fmtNum = (n: number, decimals = 3) => n.toFixed(decimals);
-const fmtPct = (n: number) => `${n.toFixed(1)}%`;
+const asFiniteNumber = (value: unknown): number | null => {
+  if (typeof value !== "number") return null;
+  if (!Number.isFinite(value)) return null;
+  return value;
+};
+
+const fmtMs = (ms: number | null | undefined) => {
+  const value = asFiniteNumber(ms);
+  return value === null ? "—" : `${value.toFixed(2)}ms`;
+};
+
+const fmtNum = (n: number | null | undefined, decimals = 3) => {
+  const value = asFiniteNumber(n);
+  return value === null ? "—" : value.toFixed(decimals);
+};
+
+const fmtPct = (n: number | null | undefined) => {
+  const value = asFiniteNumber(n);
+  return value === null ? "—" : `${value.toFixed(1)}%`;
+};
 const fmtTime = (date: Date) =>
   `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
 
@@ -365,7 +383,7 @@ const StatCard = ({
 
   return (
     <div
-      className={`relative rounded p-2 ${isDark ? "bg-zinc-800/50" : "bg-white border border-zinc-200"}`}
+      className={`glass-subpanel relative rounded p-2 ${isDark ? "" : "light-glass-sub"}`}
       onMouseLeave={() => setShowHelp(false)}
     >
       <div className="flex items-center justify-between mb-0.5">
@@ -401,7 +419,9 @@ const StatCard = ({
               {showHelp && (
                 <div
                   style={tooltipStyle}
-                  className={`absolute z-50 p-2 rounded text-[9px] w-48 ${isDark ? "bg-zinc-700 text-zinc-300" : "bg-zinc-100 text-zinc-700"} shadow-lg border ${isDark ? "border-zinc-600" : "border-zinc-300"}`}
+                  className={`glass-panel absolute z-50 w-48 p-2 text-[9px] ${
+                    isDark ? "text-zinc-200" : "text-zinc-700 light-glass"
+                  }`}
                 >
                   {help}
                 </div>
@@ -455,7 +475,9 @@ const SectionTitle = ({
   isDark: boolean;
 }) => (
   <h2
-    className={`text-[11px] font-medium mb-1.5 flex items-center gap-1 ${isDark ? "text-zinc-400" : "text-zinc-600"}`}
+    className={`mb-1.5 flex items-center gap-1 text-[11px] font-medium ${
+      isDark ? "text-zinc-300" : "text-zinc-700"
+    }`}
   >
     <Icon className="w-3 h-3" />
     {children}
@@ -536,7 +558,7 @@ const StatSection = ({
 export default function HistoryPage() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const [isDark, setIsDark] = useState(true);
+  const { isDark, toggleTheme } = useTheme();
   const [stats, setStats] = useState<StatsResult | null>(null);
   const [autocorrData, setAutocorrData] = useState<number[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -612,8 +634,6 @@ export default function HistoryPage() {
   );
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) setIsDark(savedTheme === "dark");
     loadData(timeRange);
   }, []);
 
@@ -661,12 +681,6 @@ export default function HistoryPage() {
         .catch((err) => console.error("Failed to calculate autocorr:", err));
     }
   }, [history]);
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    localStorage.setItem("theme", newTheme ? "dark" : "light");
-  };
 
   const getHelp = (key: string) => {
     const desc = t(`history.descriptions.${key}`, { defaultValue: "" });
@@ -1786,17 +1800,28 @@ export default function HistoryPage() {
     () => ({
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 0 },
+      animation: { duration: 260, easing: "easeOutQuart" as const },
+      elements: {
+        line: {
+          borderJoinStyle: "round" as const,
+        },
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: isDark ? "#27272a" : "#ffffff",
+          backgroundColor: isDark
+            ? "rgba(24, 24, 27, 0.96)"
+            : "rgba(255,255,255,0.96)",
           titleColor: isDark ? "#fafafa" : "#09090b",
-          bodyColor: isDark ? "#a1a1aa" : "#52525b",
-          borderColor: isDark ? "#3f3f46" : "#e4e4e7",
+          bodyColor: isDark ? "#d4d4d8" : "#3f3f46",
+          borderColor: isDark ? "rgba(255,255,255,0.12)" : "#e4e4e7",
           borderWidth: 1,
-          padding: 6,
-          displayColors: false,
+          cornerRadius: 10,
+          caretPadding: 8,
+          padding: 10,
+          displayColors: true,
+          boxPadding: 4,
+          usePointStyle: true,
           callbacks: {
             label: (ctx: { parsed: { y: number | null } }) =>
               `${(ctx.parsed.y ?? 0).toFixed(3)} ms`,
@@ -1805,24 +1830,39 @@ export default function HistoryPage() {
       },
       scales: {
         x: {
-          grid: { color: isDark ? "#27272a" : "#e4e4e7" },
+          border: { display: false },
+          grid: {
+            color: isDark ? "rgba(255,255,255,0.06)" : "rgba(63,63,70,0.08)",
+            drawTicks: false,
+          },
           ticks: {
-            color: isDark ? "#71717a" : "#a1a1aa",
+            color: isDark ? "#a1a1aa" : "#71717a",
             font: { size: 8 },
             maxRotation: 0,
             maxTicksLimit: 8,
+            padding: 6,
           },
         },
         y: {
-          grid: { color: isDark ? "#27272a" : "#e4e4e7" },
+          border: { display: false },
+          grid: {
+            color: isDark ? "rgba(255,255,255,0.06)" : "rgba(63,63,70,0.08)",
+            drawTicks: false,
+          },
           ticks: {
-            color: isDark ? "#71717a" : "#a1a1aa",
+            color: isDark ? "#a1a1aa" : "#71717a",
             font: { size: 8 },
             callback: (v: number | string) => `${v}ms`,
+            padding: 6,
           },
         },
       },
-      interaction: { intersect: false, mode: "index" as const },
+      interaction: {
+        intersect: false,
+        mode: "nearest" as const,
+        axis: "x" as const,
+      },
+      hover: { mode: "nearest" as const, intersect: false },
     }),
     [isDark],
   );
@@ -1835,15 +1875,40 @@ export default function HistoryPage() {
           label: "Offset",
           data: history.map((h) => h.offset),
           borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          borderWidth: 1,
-          pointRadius: history.length > 100 ? 0 : 1,
+          backgroundColor: (ctx: any) => {
+            const chart = ctx.chart;
+            const chartArea = chart?.chartArea;
+            if (!chartArea) {
+              return isDark
+                ? "rgba(59, 130, 246, 0.2)"
+                : "rgba(59, 130, 246, 0.16)";
+            }
+            const gradient = chart.ctx.createLinearGradient(
+              0,
+              chartArea.top,
+              0,
+              chartArea.bottom,
+            );
+            gradient.addColorStop(
+              0,
+              isDark ? "rgba(59,130,246,0.32)" : "rgba(59,130,246,0.24)",
+            );
+            gradient.addColorStop(1, "rgba(59,130,246,0.02)");
+            return gradient;
+          },
+          borderWidth: 1.8,
+          pointRadius: history.length > 120 ? 0 : 1.8,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          pointBackgroundColor: "#93c5fd",
+          pointBorderWidth: 0,
           fill: true,
-          tension: 0.3,
+          spanGaps: true,
+          tension: 0.38,
         },
       ],
     }),
-    [history],
+    [history, isDark],
   );
 
   const delayChartData = useMemo(
@@ -1854,15 +1919,40 @@ export default function HistoryPage() {
           label: "Delay",
           data: history.map((h) => h.delay),
           borderColor: "#22c55e",
-          backgroundColor: "rgba(34, 197, 94, 0.1)",
-          borderWidth: 1,
-          pointRadius: history.length > 100 ? 0 : 1,
+          backgroundColor: (ctx: any) => {
+            const chart = ctx.chart;
+            const chartArea = chart?.chartArea;
+            if (!chartArea) {
+              return isDark
+                ? "rgba(34, 197, 94, 0.22)"
+                : "rgba(34, 197, 94, 0.16)";
+            }
+            const gradient = chart.ctx.createLinearGradient(
+              0,
+              chartArea.top,
+              0,
+              chartArea.bottom,
+            );
+            gradient.addColorStop(
+              0,
+              isDark ? "rgba(34,197,94,0.3)" : "rgba(34,197,94,0.22)",
+            );
+            gradient.addColorStop(1, "rgba(34,197,94,0.02)");
+            return gradient;
+          },
+          borderWidth: 1.8,
+          pointRadius: history.length > 120 ? 0 : 1.8,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          pointBackgroundColor: "#86efac",
+          pointBorderWidth: 0,
           fill: true,
-          tension: 0.3,
+          spanGaps: true,
+          tension: 0.38,
         },
       ],
     }),
-    [history],
+    [history, isDark],
   );
 
   const histogramData = useMemo(() => {
@@ -1882,11 +1972,14 @@ export default function HistoryPage() {
         {
           data: bins,
           backgroundColor: isDark
-            ? "rgba(59, 130, 246, 0.5)"
-            : "rgba(59, 130, 246, 0.7)",
+            ? "rgba(59, 130, 246, 0.55)"
+            : "rgba(59, 130, 246, 0.72)",
           borderColor: "#3b82f6",
           borderWidth: 1,
-          borderRadius: 1,
+          borderRadius: 3,
+          borderSkipped: false,
+          barPercentage: 0.95,
+          categoryPercentage: 0.92,
         },
       ],
     };
@@ -1909,11 +2002,14 @@ export default function HistoryPage() {
         {
           data: bins,
           backgroundColor: isDark
-            ? "rgba(34, 197, 94, 0.5)"
-            : "rgba(34, 197, 94, 0.7)",
+            ? "rgba(34, 197, 94, 0.55)"
+            : "rgba(34, 197, 94, 0.72)",
           borderColor: "#22c55e",
           borderWidth: 1,
-          borderRadius: 1,
+          borderRadius: 3,
+          borderSkipped: false,
+          barPercentage: 0.95,
+          categoryPercentage: 0.92,
         },
       ],
     };
@@ -1927,11 +2023,12 @@ export default function HistoryPage() {
         {
           data: autocorrData,
           backgroundColor: isDark
-            ? "rgba(168, 85, 247, 0.5)"
-            : "rgba(168, 85, 247, 0.7)",
+            ? "rgba(168, 85, 247, 0.56)"
+            : "rgba(168, 85, 247, 0.72)",
           borderColor: "#a855f7",
           borderWidth: 1,
-          borderRadius: 1,
+          borderRadius: 3,
+          borderSkipped: false,
         },
       ],
     };
@@ -1948,16 +2045,24 @@ export default function HistoryPage() {
 
   return (
     <div
-      className={`min-h-screen select-none overflow-x-hidden custom-scrollbar ${isDark ? "bg-zinc-950 text-white dark" : "bg-zinc-100 text-zinc-900"}`}
+      className={`glass-page min-h-screen select-none overflow-x-hidden custom-scrollbar ${
+        isDark ? "text-white dark" : "text-zinc-900"
+      }`}
     >
       <div
-        className={`sticky top-0 z-10 px-2 py-1.5 border-b ${isDark ? "bg-zinc-950/95 border-zinc-800" : "bg-zinc-100/95 border-zinc-300"} backdrop-blur-sm`}
+        className={`glass-panel sticky top-0 z-10 mx-2 mt-2 px-2 py-1.5 ${
+          isDark ? "" : "light-glass"
+        }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.back()}
-              className={`p-1 rounded ${isDark ? "hover:bg-zinc-800" : "hover:bg-zinc-200"}`}
+              className={`glass-chip p-1 transition-colors ${
+                isDark
+                  ? "hover:bg-white/10"
+                  : "light-glass-sub hover:bg-white/70"
+              }`}
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -1988,10 +2093,8 @@ export default function HistoryPage() {
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-              className={`text-[9px] px-1.5 py-0.5 rounded border ${
-                isDark
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-300"
-                  : "bg-white border-zinc-300 text-zinc-700"
+              className={`glass-chip text-[9px] px-1.5 py-0.5 ${
+                isDark ? "text-zinc-300" : "text-zinc-700 light-glass-sub"
               } focus:outline-none focus:ring-1 focus:ring-blue-500`}
             >
               <option value="all">{t("history.timeRange.all")}</option>
@@ -2004,7 +2107,13 @@ export default function HistoryPage() {
             <button
               onClick={() => loadData(timeRange)}
               disabled={isLoading}
-              className={`p-1 rounded ${isLoading ? "opacity-50" : isDark ? "hover:bg-zinc-800" : "hover:bg-zinc-200"}`}
+              className={`glass-chip p-1 ${
+                isLoading
+                  ? "opacity-50"
+                  : isDark
+                    ? "hover:bg-white/10"
+                    : "light-glass-sub hover:bg-white/70"
+              }`}
               title={t("history.reload")}
             >
               <RefreshCw
@@ -2014,13 +2123,23 @@ export default function HistoryPage() {
             <button
               onClick={clearHistory}
               disabled={history.length === 0}
-              className={`p-1 rounded ${history.length === 0 ? "opacity-50" : isDark ? "hover:bg-zinc-800 text-red-400" : "hover:bg-zinc-200 text-red-500"}`}
+              className={`glass-chip p-1 ${
+                history.length === 0
+                  ? "opacity-50"
+                  : isDark
+                    ? "text-red-400 hover:bg-white/10"
+                    : "light-glass-sub text-red-500 hover:bg-white/70"
+              }`}
             >
               <Trash2 className="w-3 h-3" />
             </button>
             <button
               onClick={toggleTheme}
-              className={`p-1 rounded ${isDark ? "hover:bg-zinc-800" : "hover:bg-zinc-200"}`}
+              className={`glass-chip p-1 ${
+                isDark
+                  ? "hover:bg-white/10"
+                  : "light-glass-sub hover:bg-white/70"
+              }`}
             >
               {isDark ? (
                 <Sun className="w-3 h-3" />
@@ -2032,10 +2151,16 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <div className="p-2 space-y-2 pb-4">
+      <div
+        className={`history-glass p-2 space-y-2 pb-4 ${
+          isDark ? "" : "history-glass-light"
+        }`}
+      >
         {history.length < 2 || !stats ? (
           <div
-            className={`flex flex-col items-center justify-center py-12 ${isDark ? "text-zinc-600" : "text-zinc-400"}`}
+            className={`glass-panel flex flex-col items-center justify-center py-12 ${
+              isDark ? "text-zinc-500" : "text-zinc-500 light-glass"
+            }`}
           >
             <BarChart3 className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-[10px]">{t("history.noData")}</p>
@@ -3201,7 +3326,7 @@ export default function HistoryPage() {
                 {t("history.charts.offsetTrend")}
               </SectionTitle>
               <div
-                className={`rounded p-2 ${isDark ? "bg-zinc-800/50" : "bg-white border border-zinc-200"}`}
+                className={`glass-subpanel rounded p-2 ${isDark ? "" : "light-glass-sub"}`}
               >
                 <div className="h-[140px]">
                   <Line data={offsetChartData} options={chartOptions} />
@@ -3214,7 +3339,7 @@ export default function HistoryPage() {
                 {t("history.charts.delayTrend")}
               </SectionTitle>
               <div
-                className={`rounded p-2 ${isDark ? "bg-zinc-800/50" : "bg-white border border-zinc-200"}`}
+                className={`glass-subpanel rounded p-2 ${isDark ? "" : "light-glass-sub"}`}
               >
                 <div className="h-[140px]">
                   <Line data={delayChartData} options={chartOptions} />
@@ -3228,7 +3353,7 @@ export default function HistoryPage() {
                   {t("history.charts.distribution")}
                 </SectionTitle>
                 <div
-                  className={`rounded p-2 ${isDark ? "bg-zinc-800/50" : "bg-white border border-zinc-200"}`}
+                  className={`glass-subpanel rounded p-2 ${isDark ? "" : "light-glass-sub"}`}
                 >
                   <div className="h-[140px]">
                     <Bar
@@ -3258,7 +3383,7 @@ export default function HistoryPage() {
                   {t("history.charts.delayDistribution")}
                 </SectionTitle>
                 <div
-                  className={`rounded p-2 ${isDark ? "bg-zinc-800/50" : "bg-white border border-zinc-200"}`}
+                  className={`glass-subpanel rounded p-2 ${isDark ? "" : "light-glass-sub"}`}
                 >
                   <div className="h-[140px]">
                     <Bar
@@ -3288,7 +3413,7 @@ export default function HistoryPage() {
                   {t("history.charts.acf")}
                 </SectionTitle>
                 <div
-                  className={`rounded p-2 ${isDark ? "bg-zinc-800/50" : "bg-white border border-zinc-200"}`}
+                  className={`glass-subpanel rounded p-2 ${isDark ? "" : "light-glass-sub"}`}
                 >
                   <div className="h-[140px]">
                     <Bar
