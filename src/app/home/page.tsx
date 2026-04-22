@@ -168,7 +168,12 @@ export default function HomePage() {
   }>({});
 
   const triggerSakuraBurst = () => {
-    if (Math.random() >= 0.25) return;
+    const roll = Math.random();
+    const hit = roll < 0.25;
+    console.log(
+      `[sakura] roll=${roll.toFixed(3)} ${hit ? "HIT" : "miss"} (need < 0.25)`,
+    );
+    if (!hit) return;
     if (refs.current.sakura) clearTimeout(refs.current.sakura);
     setSakuraRun((n) => n + 1);
     setSakuraPhase("emit");
@@ -326,7 +331,10 @@ export default function HomePage() {
       .catch(() => {});
     checkAutostartStatus();
 
-    const checkSize = () => setIsCompact(window.innerHeight < 300);
+    // Enter compact (clock-only, full-bleed) when the viewport is too small
+    // to comfortably fit the NTP detail panel below the time card.
+    const checkSize = () =>
+      setIsCompact(window.innerHeight < 460 || window.innerWidth < 420);
     checkSize();
     window.addEventListener("resize", checkSize);
     return () => {
@@ -404,13 +412,15 @@ export default function HomePage() {
   const Digit = ({
     children,
     className = "",
+    style,
   }: {
     children: string;
     className?: string;
+    style?: React.CSSProperties;
   }) => (
     <span
       className={`inline-block text-center ${className}`}
-      style={{ fontVariantNumeric: "tabular-nums" }}
+      style={{ fontVariantNumeric: "tabular-nums", ...style }}
     >
       {children}
     </span>
@@ -419,13 +429,11 @@ export default function HomePage() {
   if (isCompact) {
     return (
       <div
-        className={`glass-page relative h-screen flex items-center justify-center select-none overflow-hidden ${
-          isDark ? "text-white" : "text-zinc-900"
+        className={`relative h-screen select-none overflow-hidden flex ${
+          isDark ? "bg-zinc-950 text-white" : "bg-zinc-50 text-zinc-900"
         }`}
       >
-        <div
-          className={`glass-panel relative z-10 overflow-hidden px-5 py-3 text-center ${isDark ? "" : "light-glass"}`}
-        >
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center overflow-hidden text-center">
           {sakuraPhase !== "off" && (
             <BgSakuraFubuki
               key={sakuraRun}
@@ -436,77 +444,82 @@ export default function HomePage() {
               onComplete={() => setSakuraPhase("off")}
             />
           )}
-          <div className="relative z-30">
-            <div className="flex items-baseline justify-center font-mono">
+          <div className="relative z-30 flex w-full flex-col items-center px-2">
+            <div
+              className="flex w-full items-baseline justify-center whitespace-nowrap font-mono font-bold leading-none"
+              style={{
+                fontSize: "clamp(2rem, min(13vw, 28vh), 12rem)",
+              }}
+            >
               <Digit
-                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
               >
                 {hh[0]}
               </Digit>
               <Digit
-                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
               >
                 {hh[1]}
               </Digit>
-              <span
-                className={`text-3xl font-bold ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                :
-              </span>
+              <span className={isDark ? "text-white" : "text-zinc-900"}>:</span>
               <Digit
-                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
               >
                 {mm[0]}
               </Digit>
               <Digit
-                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
               >
                 {mm[1]}
               </Digit>
-              <span
-                className={`text-3xl font-bold ${isDark ? "text-white" : "text-zinc-900"}`}
-              >
-                :
-              </span>
+              <span className={isDark ? "text-white" : "text-zinc-900"}>:</span>
               <Digit
-                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
               >
                 {ss[0]}
               </Digit>
               <Digit
-                className={`text-3xl font-bold w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
+                className={`w-[1.2ch] ${isDark ? "text-white" : "text-zinc-900"}`}
               >
                 {ss[1]}
               </Digit>
               <span
-                className={`text-base ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className={`${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                style={{ fontSize: "0.4em" }}
               >
                 .
               </span>
               <Digit
-                className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className={`w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                style={{ fontSize: "0.4em" }}
               >
                 {ms[0]}
               </Digit>
               <Digit
-                className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className={`w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                style={{ fontSize: "0.4em" }}
               >
                 {ms[1]}
               </Digit>
               <Digit
-                className={`text-base w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                className={`w-[1ch] ${isDark ? "text-zinc-500" : "text-zinc-400"}`}
+                style={{ fontSize: "0.4em" }}
               >
                 {ms[2]}
               </Digit>
             </div>
             <p
-              className={`text-xs mt-1 ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
+              className={`mt-3 ${isDark ? "text-zinc-500" : "text-zinc-500"}`}
+              style={{ fontSize: "clamp(0.7rem, 2.2vw, 1rem)" }}
               suppressHydrationWarning
             >
               {dateStr}
             </p>
             {status && (
-              <p className={`text-[9px] font-mono ${status.color}`}>
+              <p
+                className={`mt-0.5 font-mono ${status.color}`}
+                style={{ fontSize: "clamp(0.6rem, 1.8vw, 0.85rem)" }}
+              >
                 {result!.offset >= 0 ? "+" : ""}
                 {fmtS(result!.offset)}
               </p>
